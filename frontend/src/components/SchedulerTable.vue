@@ -39,6 +39,13 @@
             <option value="Running">執行中</option>
             <option value="Disabled">已停用</option>
           </select>
+
+          <select v-model="computerFilter" class="rounded-lg border border-gray-300 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <option value="">全部電腦</option>
+            <option v-for="computer in uniqueComputers" :key="computer" :value="computer">
+              {{ computer }}
+            </option>
+          </select>
           
           <button @click="refreshJobs" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition-colors flex items-center gap-2">
             <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
@@ -169,7 +176,8 @@
     const error = ref(null);
     const searchQuery = ref('');
     const statusFilter = ref('Ready');
- 
+    const computerFilter = ref('');
+
     const fetchJobs = async () => {
       loading.value = true;
       error.value = null;
@@ -188,7 +196,12 @@
     const refreshJobs = () => {
       fetchJobs();
     };
- 
+
+    const uniqueComputers = computed(() => {
+      const computers = new Set(jobs.value.map(job => job.ExtraInfo.ComputerName));
+      return Array.from(computers).sort();
+    });
+
     const filteredJobs = computed(() => {
       return jobs.value.filter(job => {
         const matchesSearch = searchQuery.value === '' ||
@@ -196,8 +209,11 @@
         
         const matchesStatus = statusFilter.value === '' ||
           job.ExtraInfo.State === statusFilter.value;
+
+        const matchesComputer = computerFilter.value === '' ||
+          job.ExtraInfo.ComputerName === computerFilter.value;
         
-        return matchesSearch && matchesStatus;
+        return matchesSearch && matchesStatus && matchesComputer;
       });
     });
  
@@ -305,6 +321,8 @@
       error,
       searchQuery,
       statusFilter,
+      computerFilter,
+      uniqueComputers,
       filteredJobs,
       getTriggers,
       getCommands,
