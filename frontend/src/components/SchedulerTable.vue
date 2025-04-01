@@ -57,19 +57,51 @@
               {{ job.RegistrationInfo.URI }}
             </h2>
             <span :class="getStatusClass(job.ExtraInfo.State)" class="px-2 py-1 rounded-full text-xs font-bold">
-              {{ job.ExtraInfo.State }}
+              {{ getStatusChinese(job.ExtraInfo.State) }}
             </span>
           </div>
           
           <div class="p-4 space-y-3">
             <div class="flex items-start">
               <span class="text-gray-500 w-24 flex-shrink-0">執行指令:</span>
-              <span class="text-gray-800 break-all">{{ job.Actions.Exec.Command || '無' }}</span>
+              <div class="flex-1">
+                <code class="block w-full bg-gray-50 text-sm p-3 rounded-lg border border-gray-200 font-mono text-gray-800 break-all whitespace-pre-wrap">{{ job.Actions.Exec.Command || '無' }}</code>
+                <div v-if="job.Actions.Exec.Arguments" class="mt-2">
+                  <span class="text-xs text-gray-500">參數:</span>
+                  <code class="ml-2 px-2 py-1 bg-gray-50 text-xs rounded border border-gray-200 font-mono">{{ job.Actions.Exec.Arguments }}</code>
+                </div>
+              </div>
             </div>
             
             <div class="flex items-start">
               <span class="text-gray-500 w-24 flex-shrink-0">觸發程序:</span>
-              <span class="text-gray-800">{{ getTriggers(job) }}</span>
+              <div class="flex-1 space-y-2">
+                <!-- 定時觸發 -->
+                <div v-if="getTriggers(job).timeTriggers.length" class="space-y-1">
+                  <div v-for="(trigger, index) in getTriggers(job).timeTriggers" :key="index"
+                    class="flex items-center gap-2 bg-blue-50 px-3 py-2 rounded-md">
+                    <svg class="h-4 w-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span class="text-sm text-blue-700">{{ trigger }}</span>
+                  </div>
+                </div>
+                <!-- 日曆觸發 -->
+                <div v-if="getTriggers(job).calendarTriggers.length" class="space-y-1">
+                  <div v-for="(trigger, index) in getTriggers(job).calendarTriggers" :key="index"
+                    class="flex items-center gap-2 bg-purple-50 px-3 py-2 rounded-md">
+                    <svg class="h-4 w-4 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    <span class="text-sm text-purple-700">{{ trigger }}</span>
+                  </div>
+                </div>
+                <!-- 無觸發程序 -->
+                <div v-if="!getTriggers(job).timeTriggers.length && !getTriggers(job).calendarTriggers.length"
+                  class="text-gray-500 italic text-sm">
+                  無觸發程序
+                </div>
+              </div>
             </div>
             
             <div class="flex items-start">
@@ -159,20 +191,38 @@
  
     const getTriggers = (job) => {
       const triggers = job.Triggers;
-      let triggerText = '';
- 
+      const result = {
+        timeTriggers: [],
+        calendarTriggers: []
+      };
+
       if (triggers && triggers.length > 0) {
+        // 處理定時觸發
         if (triggers[0].TimeTriggers) {
-          triggerText += triggers[0].TimeTriggers.map(trigger => `定時: ${formatDateTime(trigger.StartBoundary)}`).join(', ');
+          result.timeTriggers = triggers[0].TimeTriggers.map(trigger => {
+            let text = `${formatDateTime(trigger.StartBoundary)}`;
+            if (trigger.Repetition.Interval) {
+              text += ` (每 ${trigger.Repetition.Interval.replace('PT', '').replace('H', '小時')})`;
+            }
+            return text;
+          });
         }
+
+        // 處理日曆觸發
         if (triggers[0].CalendarTriggers) {
-          triggerText += triggers[0].CalendarTriggers.map(trigger => `日曆: ${formatDateTime(trigger.StartBoundary)}`).join(', ');
+          result.calendarTriggers = triggers[0].CalendarTriggers.map(trigger => {
+            let text = `${formatDateTime(trigger.StartBoundary)}`;
+            if (trigger.ScheduleByDay.DaysInterval) {
+              text += ` (每 ${trigger.ScheduleByDay.DaysInterval} 天)`;
+            }
+            return text;
+          });
         }
       }
- 
-      return triggerText || '無';
+
+      return result;
     };
- 
+
     const formatDateTime = (dateTime) => {
       if (!dateTime) return '無';
       
@@ -190,15 +240,30 @@
         return dateTime;
       }
     };
+
+    const getStatusChinese = (status) => {
+      switch (status) {
+        case 'Ready':
+          return '就緒';
+        case 'Running':
+          return '執行中';
+        case 'Disabled':
+          return '已停用';
+        default:
+          return status;
+      }
+    };
  
     const getStatusClass = (status) => {
       switch (status) {
-        case '已啟用':
+        case 'Ready':
           return 'bg-green-100 text-green-800';
-        case '已停用':
+        case 'Running':
+          return 'bg-blue-100 text-blue-800';
+        case 'Disabled':
           return 'bg-gray-100 text-gray-800';
         default:
-          return 'bg-blue-100 text-blue-800';
+          return 'bg-gray-100 text-gray-800';
       }
     };
  
@@ -223,6 +288,7 @@
       getTriggers,
       formatDateTime,
       getStatusClass,
+      getStatusChinese,
       getResultClass,
       refreshJobs
     };
