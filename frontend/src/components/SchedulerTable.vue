@@ -230,7 +230,7 @@
           result.timeTriggers = triggers[0].TimeTriggers.map(trigger => {
             let text = `${formatDateTime(trigger.StartBoundary)}`;
             if (trigger.Repetition.Interval) {
-              text += ` (每 ${trigger.Repetition.Interval.replace('PT', '').replace('H', '小時')})`;
+              text += ` (每 ${trigger.Repetition.Interval.replace('PT', '').replace('H', ' 小時').replace('M', ' 分鐘')})`;
             }
             return text;
           });
