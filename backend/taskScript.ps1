@@ -24,17 +24,20 @@ $tasks = Invoke-Command -Session $session -ScriptBlock {
 
         # 添加額外的節點
         $extraInfo = $tempDoc.CreateElement("ExtraInfo")
+        $taskName = $tempDoc.CreateElement("TaskName")
+        $taskName.InnerText = $task.TaskName
         $computerName = $tempDoc.CreateElement("ComputerName")
         $computerName.InnerText = $hostname
         $state = $tempDoc.CreateElement("State")
         $state.InnerText = $task.State
         $lastRunTime = $tempDoc.CreateElement("LastRunTime")
-        $lastRunTime.InnerText = if ($taskInfo) { $taskInfo.LastRunTime.ToString() } else { "N/A" }
+        $lastRunTime.InnerText = if ($taskInfo.LastRunTime) { $taskInfo.LastRunTime.ToString() } else { "N/A" }
         $nextRunTime = $tempDoc.CreateElement("NextRunTime")
-        $nextRunTime.InnerText = if ($taskInfo) { $taskInfo.NextRunTime.ToString() } else { "N/A" }
+        $nextRunTime.InnerText = if ($taskInfo.NextRunTime) { $taskInfo.NextRunTime.ToString() } else { "N/A" }
         $lastTaskResult = $tempDoc.CreateElement("LastTaskResult")
-        $lastTaskResult.InnerText = if ($taskInfo) { $taskInfo.LastTaskResult.ToString() } else { "N/A" }
+        $lastTaskResult.InnerText = if ($taskInfo.LastTaskResult) { $taskInfo.LastTaskResult.ToString() } else { 0 }
 
+        $extraInfo.AppendChild($taskName) | Out-Null
         $extraInfo.AppendChild($computerName) | Out-Null
         $extraInfo.AppendChild($state) | Out-Null
         $extraInfo.AppendChild($lastRunTime) | Out-Null

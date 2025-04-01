@@ -66,6 +66,7 @@ type Exec struct {
 }
 
 type ExtraInfo struct {
+	TaskName       string `xml:"TaskName"`
 	ComputerName   string `xml:"ComputerName"`
 	State          string `xml:"State"`
 	LastRunTime    string `xml:"LastRunTime"`
