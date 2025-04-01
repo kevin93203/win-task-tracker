@@ -65,11 +65,18 @@
             <div class="flex items-start">
               <span class="text-gray-500 w-24 flex-shrink-0">執行指令:</span>
               <div class="flex-1">
-                <code class="block w-full bg-gray-50 text-sm p-3 rounded-lg border border-gray-200 font-mono text-gray-800 break-all whitespace-pre-wrap">{{ job.Actions.Exec.Command || '無' }}</code>
-                <div v-if="job.Actions.Exec.Arguments" class="mt-2">
-                  <span class="text-xs text-gray-500">參數:</span>
-                  <code class="ml-2 px-2 py-1 bg-gray-50 text-xs rounded border border-gray-200 font-mono">{{ job.Actions.Exec.Arguments }}</code>
+                <div v-if="getCommands(job).length > 0" class="space-y-2">
+                  <div v-for="(command, index) in getCommands(job)" :key="index"
+                    class="group">
+                    <div class="text-xs text-gray-500 mb-1">指令 #{{ index + 1 }}</div>
+                    <code class="block w-full bg-gray-50 text-sm p-3 rounded-lg border border-gray-200 font-mono text-gray-800 break-all whitespace-pre-wrap group-hover:bg-gray-100 transition-colors">{{ command.Command || '無' }}</code>
+                    <div v-if="command.Arguments" class="mt-2">
+                      <span class="text-xs text-gray-500">參數:</span>
+                      <code class="ml-2 px-2 py-1 bg-gray-50 text-xs rounded border border-gray-200 font-mono">{{ command.Arguments }}</code>
+                    </div>
+                  </div>
                 </div>
+                <div v-else class="text-gray-500 italic">無執行指令</div>
               </div>
             </div>
             
@@ -223,6 +230,15 @@
       return result;
     };
 
+    const getCommands = (job) => {
+      if (job.Actions.Execs) {
+        return job.Actions.Execs;
+      } else if (job.Actions.Exec) {
+        return [job.Actions.Exec];
+      }
+      return [];
+    };
+
     const formatDateTime = (dateTime) => {
       if (!dateTime) return '無';
       
@@ -286,6 +302,7 @@
       statusFilter,
       filteredJobs,
       getTriggers,
+      getCommands,
       formatDateTime,
       getStatusClass,
       getStatusChinese,

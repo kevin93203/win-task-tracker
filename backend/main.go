@@ -56,7 +56,7 @@ type ScheduleByDay struct {
 }
 
 type Actions struct {
-	Exec Exec `xml:"Exec"`
+	Execs []Exec `xml:"Exec"`
 }
 
 type Exec struct {
