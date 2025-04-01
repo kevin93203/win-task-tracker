@@ -29,9 +29,10 @@ type Triggers struct {
 }
 
 type RegistrationInfo struct {
-	Date   string `xml:"Date"`
-	Author string `xml:"Author"`
-	URI    string `xml:"URI"`
+	Date        string `xml:"Date"`
+	Author      string `xml:"Author"`
+	Description string `xml:"Description"`
+	URI         string `xml:"URI"`
 }
 
 type TimeTrigger struct {
