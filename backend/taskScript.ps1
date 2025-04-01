@@ -1,0 +1,67 @@
+[Console]::OutputEncoding = [Text.Encoding]::UTF8;
+
+$secpasswd = ConvertTo-SecureString '%s' -AsPlainText -Force
+$cred = New-Object System.Management.Automation.PSCredential ('%s', $secpasswd)
+$session = New-PSSession -ComputerName "%s" -Credential $cred
+
+$tasks = Invoke-Command -Session $session -ScriptBlock {
+    $hostname = hostname
+    # 建立 XML 文件和根元素
+    $xmlDoc = New-Object System.Xml.XmlDocument
+    $root = $xmlDoc.CreateElement("ScheduledTasks")
+    $xmlDoc.AppendChild($root) | Out-Null
+
+    # 獲取所有排程任務
+    Get-ScheduledTask | Where-Object { $_.Principal.UserId -eq "%s" } | ForEach-Object {
+        $task = $_
+        $taskInfo = Get-ScheduledTaskInfo -TaskName $task.TaskName -TaskPath $task.TaskPath 2>$null
+
+        $taskXml = Export-ScheduledTask -TaskName $task.TaskName -TaskPath $task.TaskPath
+
+        # 將任務 XML 字符串轉換為 XML 節點並導入
+        $tempDoc = New-Object System.Xml.XmlDocument
+        $tempDoc.LoadXml($taskXml)
+
+        # 添加額外的節點
+        $extraInfo = $tempDoc.CreateElement("ExtraInfo")
+        $computerName = $tempDoc.CreateElement("ComputerName")
+        $computerName.InnerText = $hostname
+        $state = $tempDoc.CreateElement("State")
+        $state.InnerText = $task.State
+        $lastRunTime = $tempDoc.CreateElement("LastRunTime")
+        $lastRunTime.InnerText = if ($taskInfo) { $taskInfo.LastRunTime.ToString() } else { "N/A" }
+        $nextRunTime = $tempDoc.CreateElement("NextRunTime")
+        $nextRunTime.InnerText = if ($taskInfo) { $taskInfo.NextRunTime.ToString() } else { "N/A" }
+        $lastTaskResult = $tempDoc.CreateElement("LastTaskResult")
+        $lastTaskResult.InnerText = if ($taskInfo) { $taskInfo.LastTaskResult.ToString() } else { "N/A" }
+
+        $extraInfo.AppendChild($computerName) | Out-Null
+        $extraInfo.AppendChild($state) | Out-Null
+        $extraInfo.AppendChild($lastRunTime) | Out-Null
+        $extraInfo.AppendChild($nextRunTime) | Out-Null
+        $extraInfo.AppendChild($lastTaskResult) | Out-Null
+        $tempDoc.DocumentElement.AppendChild($extraInfo) | Out-Null
+
+        # 將任務的根節點直接導入到主 XML 文檔
+        $importNode = $xmlDoc.ImportNode($tempDoc.DocumentElement, $true)
+        $root.AppendChild($importNode) | Out-Null
+    }
+
+    # 指定輸出檔案的路徑
+    $outputPath = "output.xml"
+
+    # 將 xmlDoc 輸出成 XML 檔案
+    $xmlDoc.Save($outputPath)
+
+    return $xmlDoc.OuterXml
+}
+
+# 將 XML 字符串轉換為 UTF-8 編碼的字節，然後再轉回字符串
+$utf8Encoding = [System.Text.Encoding]::UTF8
+$utf8Bytes = $utf8Encoding.GetBytes($tasks)
+$tasksUtf8 = $utf8Encoding.GetString($utf8Bytes)
+
+# 顯示 UTF-8 編碼的 XML
+$tasksUtf8
+
+Remove-PSSession $session
