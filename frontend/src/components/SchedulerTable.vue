@@ -58,7 +58,7 @@
  
       <!-- 工作卡片視圖 -->
       <div v-if="filteredJobs.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <div v-for="job in filteredJobs" :key="job.RegistrationInfo.URI" class="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-300">
+        <div v-for="job in filteredJobs" :key="job.ExtraInfo.ComputerName + job.RegistrationInfo.URI" class="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-300">
           <div class="p-4 border-b border-gray-100">
             <div class="flex justify-between items-center mb-2">
               <h2 class="font-bold text-lg text-gray-800 truncate" :title="job.ExtraInfo.TaskName">
