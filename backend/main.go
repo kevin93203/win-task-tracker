@@ -9,6 +9,8 @@ import (
 	"os"
 	"os/exec"
 	"sync"
+	"github.com/kevin93203/win-task-tracker/auth"
+	"github.com/kevin93203/win-task-tracker/handlers"
 )
 
 type ScheduledTasks struct {
@@ -195,9 +197,21 @@ func getTasks(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
+	// Initialize the database
+	if err := auth.InitDB(); err != nil {
+		fmt.Printf("Failed to initialize database: %v\n", err)
+		return
+	}
+
+	// Authentication endpoints
+	http.HandleFunc("/api/register", handlers.RegisterHandler)
+	http.HandleFunc("/api/login", handlers.LoginHandler)
+	
+	// Existing endpoints
 	http.HandleFunc("/api/tasks", getTasks)
-	fmt.Println("伺服器啟動於 http://localhost:8080")
+
+	fmt.Println("Server is running on :8080")
 	if err := http.ListenAndServe(":8080", nil); err != nil {
-		panic(err)
+		fmt.Printf("Server failed to start: %v\n", err)
 	}
 }
