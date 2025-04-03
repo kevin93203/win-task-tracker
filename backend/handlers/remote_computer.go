@@ -3,7 +3,6 @@ package handlers
 import (
 	"database/sql"
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"strconv"
 
@@ -404,7 +403,6 @@ func (h *RemoteComputerHandler) HandleGetComputerCredentialMappings(w http.Respo
 
 	// Get userID from context (set by auth middleware)
 	userID := r.Context().Value("user_id").(int64)
-	fmt.Println("User ID:", userID)
 
 	// Get the mapping
 	mappings, err := models.GetComputerCredentialMappingsByUser(h.db, userID)

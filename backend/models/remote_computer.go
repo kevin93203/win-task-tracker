@@ -191,7 +191,7 @@ func DeleteCredential(db *sql.DB, credentialID int64) error {
 	return err
 }
 
-// UpdateCredentialPassword updates the password of a credential
+// UpdateCredentialPassword updates only the password of a credential
 func UpdateCredentialPassword(db *sql.DB, credentialID int64, newPassword string) error {
 	_, err := db.Exec(`
 		UPDATE credentials
