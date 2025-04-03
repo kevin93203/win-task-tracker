@@ -60,7 +60,7 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 		Name:     "jwt",
 		Value:    token,
 		Expires:  expTime,
-		HttpOnly: false,
+		HttpOnly: true,
 		Path:     "/",
 		SameSite: http.SameSiteStrictMode,
 		Secure:   true, // Set to true in production with HTTPS
@@ -103,7 +103,7 @@ func LogoutHandler(w http.ResponseWriter, r *http.Request) {
 		Name:     "jwt",
 		Value:    "",
 		Expires:  time.Now().Add(-time.Hour), // Expire immediately
-		HttpOnly: false,
+		HttpOnly: true,
 		Path:     "/",
 		SameSite: http.SameSiteStrictMode,
 		Secure:   true,
