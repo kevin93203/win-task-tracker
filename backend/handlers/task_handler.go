@@ -83,20 +83,39 @@ type RemoteHost struct {
 	ComputerName string `json:"computer_name"`
 }
 
-func executeCommand(command string, wg *sync.WaitGroup, results chan<- ScheduledTasks, errChan chan<- error) {
+type TaskError struct {
+	ComputerName string `json:"computer_name"`
+	UserName     string `json:"username"`
+	Error        string `json:"error"`
+}
+
+type TaskResponse struct {
+	Tasks  []Task      `json:"tasks"`
+	Errors []TaskError `json:"errors,omitempty"`
+}
+
+func executeCommand(command string, host RemoteHost, wg *sync.WaitGroup, results chan<- ScheduledTasks, errChan chan<- TaskError) {
 	defer wg.Done()
 
 	cmd := exec.Command("powershell", "-Command", command)
 	output, err := cmd.Output()
 	if err != nil {
-		errChan <- fmt.Errorf("執行命令錯誤: %v", err)
+		errChan <- TaskError{
+			ComputerName: host.ComputerName,
+			UserName:     host.UserName,
+			Error:        fmt.Sprintf("執行命令錯誤: %v", err),
+		}
 		return
 	}
 
 	var scheduledTasks ScheduledTasks
 	err = xml.Unmarshal([]byte(output), &scheduledTasks)
 	if err != nil {
-		errChan <- fmt.Errorf("解析 XML 時發生錯誤: %v", err)
+		errChan <- TaskError{
+			ComputerName: host.ComputerName,
+			UserName:     host.UserName,
+			Error:        fmt.Sprintf("解析 XML 時發生錯誤: %v", err),
+		}
 		return
 	}
 
@@ -150,21 +169,23 @@ func GetTasksHandler(w http.ResponseWriter, r *http.Request) {
 	// 獲取用戶的電腦憑證
 	db := models.GetDB()
 	remoteHosts, err := getHostsFromCredentials(db, int64(claims.UserID))
+	fmt.Printf("Remote Hosts: %+v\n", remoteHosts)
+
 	if err != nil {
 		http.Error(w, fmt.Sprintf("獲取電腦憑證失敗: %v", err), http.StatusInternalServerError)
 		return
 	}
 
 	if len(remoteHosts) == 0 {
-		// 如果用戶沒有設定任何電腦憑證，返回空陣列
+		// 如果用戶沒有設定任何電腦憑證，返回空回應
 		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte("[]"))
+		json.NewEncoder(w).Encode(TaskResponse{Tasks: []Task{}})
 		return
 	}
 
 	var wg sync.WaitGroup
 	results := make(chan ScheduledTasks, len(remoteHosts))
-	errChan := make(chan error, len(remoteHosts))
+	errChan := make(chan TaskError, len(remoteHosts))
 
 	// 讀取 PowerShell 腳本
 	script, err := os.ReadFile("taskScript.ps1")
@@ -173,16 +194,12 @@ func GetTasksHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var commands []string
+	// 執行每個電腦的命令
 	for _, host := range remoteHosts {
 		command := fmt.Sprintf(string(script),
 			host.Password, host.UserName, host.ComputerName, host.UserName)
-		commands = append(commands, command)
-	}
-
-	for _, command := range commands {
 		wg.Add(1)
-		go executeCommand(command, &wg, results, errChan)
+		go executeCommand(command, host, &wg, results, errChan)
 	}
 
 	go func() {
@@ -191,31 +208,23 @@ func GetTasksHandler(w http.ResponseWriter, r *http.Request) {
 		close(errChan)
 	}()
 
-	// 檢查是否有錯誤
-	var errors []error
+	// 收集所有任務和錯誤
+	response := TaskResponse{}
+
+	// 收集錯誤
 	for err := range errChan {
-		errors = append(errors, err)
+		response.Errors = append(response.Errors, err)
 	}
 
-	if len(errors) > 0 {
-		errorMsg := "執行任務時發生錯誤:\n"
-		for _, err := range errors {
-			errorMsg += err.Error() + "\n"
-		}
-		http.Error(w, errorMsg, http.StatusInternalServerError)
-		return
-	}
-
-	var allTasks []Task
+	// 收集任務
 	for output := range results {
-		allTasks = append(allTasks, output.Tasks...)
+		response.Tasks = append(response.Tasks, output.Tasks...)
 	}
 
+	// 返回JSON回應
 	w.Header().Set("Content-Type", "application/json")
-	jsonOutput, err := json.Marshal(allTasks)
-	if err != nil {
+	if err := json.NewEncoder(w).Encode(response); err != nil {
 		http.Error(w, "無法轉換為 JSON", http.StatusInternalServerError)
 		return
 	}
-	w.Write(jsonOutput)
 }
