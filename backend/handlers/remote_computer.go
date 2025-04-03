@@ -47,6 +47,11 @@ type MapComputerCredentialRequest struct {
 	CredentialID int64 `json:"credential_id"`
 }
 
+// DeleteCredentialRequest represents the request body for deleting a credential
+type DeleteCredentialRequest struct {
+	CredentialID int64 `json:"credential_id"`
+}
+
 // DeleteComputerRequest represents the request body for deleting a computer
 type DeleteComputerRequest struct {
 	ComputerID int64 `json:"computer_id"`
@@ -321,16 +326,16 @@ func (h *RemoteComputerHandler) HandleDeleteCredential(w http.ResponseWriter, r 
 		return
 	}
 
-	credentialID, err := strconv.ParseInt(r.URL.Query().Get("credential_id"), 10, 64)
-	if err != nil {
-		http.Error(w, "Invalid credential ID", http.StatusBadRequest)
+	var req DeleteCredentialRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
 		return
 	}
 
 	userID := r.Context().Value("user_id").(int64)
 
 	// Check if the credential belongs to the user
-	isOwner, err := models.CheckCredentialOwnership(h.db, credentialID, userID)
+	isOwner, err := models.CheckCredentialOwnership(h.db, req.CredentialID, userID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -340,7 +345,7 @@ func (h *RemoteComputerHandler) HandleDeleteCredential(w http.ResponseWriter, r 
 		return
 	}
 
-	err = models.DeleteCredential(h.db, credentialID)
+	err = models.DeleteCredential(h.db, req.CredentialID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
