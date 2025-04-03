@@ -16,7 +16,7 @@ func CorsMiddleware(next http.HandlerFunc) http.HandlerFunc {
 		w.Header().Set("Access-Control-Allow-Credentials", "true")
 
 		// 允許的方法和標頭
-		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS, PUT, DELETE")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS, PUT, PATCH,DELETE")
 		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
 		// 暴露 Authorization 標頭
 		w.Header().Set("Access-Control-Expose-Headers", "Authorization")
