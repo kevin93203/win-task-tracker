@@ -33,6 +33,7 @@ func main() {
 	http.HandleFunc("/api/computers/list", middleware.CorsMiddleware(middleware.AuthMiddleware(remoteComputerHandler.HandleGetUserComputers)))
 	http.HandleFunc("/api/computers/credentials", middleware.CorsMiddleware(middleware.AuthMiddleware(remoteComputerHandler.HandleGetComputerCredentials)))
 	http.HandleFunc("/api/credentials/list", middleware.CorsMiddleware(middleware.AuthMiddleware(remoteComputerHandler.HandleListUserCredentials)))
+	http.HandleFunc("/api/computers/credential-mappings", middleware.CorsMiddleware(middleware.AuthMiddleware(remoteComputerHandler.HandleGetComputerCredentialMappings)))
 
 	// Post method endpoints
 	http.HandleFunc("/api/computers", middleware.CorsMiddleware(middleware.AuthMiddleware(remoteComputerHandler.HandleCreateRemoteComputer)))

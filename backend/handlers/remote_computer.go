@@ -3,6 +3,7 @@ package handlers
 import (
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strconv"
 
@@ -392,6 +393,29 @@ func (h *RemoteComputerHandler) HandleUpdateCredential(w http.ResponseWriter, r 
 	}
 
 	json.NewEncoder(w).Encode(map[string]string{"message": "Credential updated successfully"})
+}
+
+// HandleGetComputerCredentialMappings handles retrieving a credential mapping for a specific computer and user
+func (h *RemoteComputerHandler) HandleGetComputerCredentialMappings(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Get userID from context (set by auth middleware)
+	userID := r.Context().Value("user_id").(int64)
+	fmt.Println("User ID:", userID)
+
+	// Get the mapping
+	mappings, err := models.GetComputerCredentialMappingsByUser(h.db, userID)
+	if err != nil {
+		http.Error(w, "Failed to get computer credential mapping", http.StatusInternalServerError)
+		return
+	}
+
+	// Return the mapping as JSON (null if not found)
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(mappings)
 }
 
 func (h *RemoteComputerHandler) HandleUpdateComputerCredentialMapping(w http.ResponseWriter, r *http.Request) {

@@ -23,12 +23,14 @@ type Credential struct {
 }
 
 type ComputerCredentialMapping struct {
-	ID           int64     `json:"id"`
-	ComputerID   int64     `json:"computer_id"`
-	CredentialID int64     `json:"credential_id"`
-	CreatedAt    time.Time `json:"created_at"`
-	UpdatedAt    time.Time `json:"updated_at"`
-	CreatedByID  int64     `json:"created_by_id"`
+	ComputerID         int64      `json:"computer_id"`
+	ComputerName       string     `json:"computer_name"`
+	MappingID          *int64     `json:"mapping_id"`
+	CredentialID       *int64     `json:"credential_id"`
+	CredentialUsername *string    `json:"credential_username"`
+	ComputerCreatedAt  time.Time  `json:"computer_created_at"`
+	MappingUpdatedAt   *time.Time `json:"mapping_updated_at"`
+	CreatedByID        int64      `json:"created_by_id"`
 }
 
 func (table *RemoteComputer) InitTable(db *sql.DB) error {
@@ -81,6 +83,69 @@ func (table *ComputerCredentialMapping) InitTable(db *sql.DB) error {
 		)
 	`)
 	return err
+}
+
+// GetComputerCredentialMappingsByUser retrieves a credential mapping for a specific computer created by a specific user
+func GetComputerCredentialMappingsByUser(db *sql.DB, userID int64) ([]ComputerCredentialMapping, error) {
+	rows, err := db.Query(`
+		SELECT 
+			r.id AS computer_id, 
+			r.name AS computer_name, 
+			m.id AS mapping_id, 
+			c.id AS credentials_id, 
+			c.username AS credentials_username, 
+			r.created_at AS computer_created_at, 
+			m.updated_at AS mapping_updated_at, 
+			r.created_by_id AS created_by_id 
+		FROM remote_computers r
+		LEFT JOIN computer_credential_mappings m ON m.computer_id = r.id
+		LEFT JOIN credentials c ON c.id = m.credential_id
+		WHERE r.created_by_id = ?
+	`, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var mappings []ComputerCredentialMapping
+	for rows.Next() {
+		var mapping ComputerCredentialMapping
+		var mappingID, credentialID sql.NullInt64
+		var credentialUsername sql.NullString
+		var mappingUpdatedAt sql.NullTime
+
+		err := rows.Scan(
+			&mapping.ComputerID,
+			&mapping.ComputerName,
+			&mappingID,
+			&credentialID,
+			&credentialUsername,
+			&mapping.ComputerCreatedAt,
+			&mappingUpdatedAt,
+			&mapping.CreatedByID,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		// 只有在值有效時才設置指標
+		if mappingID.Valid {
+			mapping.MappingID = &mappingID.Int64
+		}
+		if credentialID.Valid {
+			mapping.CredentialID = &credentialID.Int64
+		}
+		if credentialUsername.Valid {
+			mapping.CredentialUsername = &credentialUsername.String
+		}
+		if mappingUpdatedAt.Valid {
+			mapping.MappingUpdatedAt = &mappingUpdatedAt.Time
+		}
+
+		mappings = append(mappings, mapping)
+	}
+
+	return mappings, nil
 }
 
 // GetCredentialsByUserID retrieves all credentials created by a specific user
