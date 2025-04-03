@@ -8,6 +8,7 @@
       <ErrorMessage v-else-if="error" :message="error" />
    
       <div v-else>
+        <TaskErrors :errors="taskErrors" />
         <SchedulerFilters
           v-model:searchQuery="searchQuery"
           v-model:statusFilter="statusFilter"
@@ -41,6 +42,7 @@ import JobCard from './scheduler/JobCard.vue';
 import LoadingSpinner from './scheduler/LoadingSpinner.vue';
 import ErrorMessage from './scheduler/ErrorMessage.vue';
 import NoResults from './scheduler/NoResults.vue';
+import TaskErrors from './scheduler/TaskErrors.vue';
 import { globalState } from '../main';
 
 export default {
@@ -51,16 +53,21 @@ export default {
     JobCard,
     LoadingSpinner,
     ErrorMessage,
-    NoResults
+    NoResults,
+    TaskErrors
   },
   setup() {
     const router = useRouter();
     const jobs = ref([]);
+    const taskErrors = ref([]);
     const loading = ref(true);
     const error = ref(null);
     const searchQuery = ref('');
     const statusFilter = ref('Ready');
     const computerFilter = ref('');
+    
+    // 確保jobs.value永遠是陣列
+    const ensureJobsArray = computed(() => jobs.value || []);
     const isSidebarOpen = computed(() => globalState.sidebarOpen);
 
     const fetchJobs = async () => {
@@ -78,7 +85,11 @@ export default {
             'Authorization': `Bearer ${jwt}`
           }
         });
-        jobs.value = response.data;
+        
+        // 處理新的回應格式
+        const { tasks = [], errors = [] } = response.data || {};
+        jobs.value = Array.isArray(tasks) ? tasks : [];
+        taskErrors.value = Array.isArray(errors) ? errors : [];
       } catch (err) {
         console.error(err);
         if (err.response && err.response.status === 401) {
@@ -96,12 +107,14 @@ export default {
     };
 
     const uniqueComputers = computed(() => {
-      const computers = new Set(jobs.value.map(job => job.ExtraInfo.ComputerName));
+      const computers = new Set(ensureJobsArray.value
+        .filter(job => job && job.ExtraInfo && job.ExtraInfo.ComputerName)
+        .map(job => job.ExtraInfo.ComputerName));
       return Array.from(computers).sort();
     });
 
     const filteredJobs = computed(() => {
-      return jobs.value.filter(job => {
+      return ensureJobsArray.value.filter(job => {
         const matchesSearch = searchQuery.value === '' ||
           job.RegistrationInfo.URI.toLowerCase().includes(searchQuery.value.toLowerCase());
         
@@ -123,6 +136,7 @@ export default {
       jobs,
       loading,
       error,
+      taskErrors,
       searchQuery,
       statusFilter,
       computerFilter,
