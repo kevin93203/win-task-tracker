@@ -196,7 +196,7 @@
                   <td class="px-6 py-4 whitespace-nowrap">
                     <div class="text-sm text-gray-500">{{ formatDate(computer.updated_at) }}</div>
                   </td>
-                  <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                  <td class="px-6 py-4 whitespace-nowrap text-left text-sm font-medium">
                     <button
                       @click="deleteComputer(computer.id)"
                       class="text-red-600 hover:text-red-900"
@@ -227,6 +227,9 @@
                     建立時間
                   </th>
                   <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    更新時間
+                  </th>
+                  <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     操作
                   </th>
                 </tr>
@@ -244,12 +247,21 @@
                   <td class="px-6 py-4 whitespace-nowrap">
                     <div class="text-sm text-gray-500">{{ formatDate(credential.created_at) }}</div>
                   </td>
-                  <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                  <td class="px-6 py-4 whitespace-nowrap">
+                    <div class="text-sm text-gray-500">{{ formatDate(credential.updated_at) }}</div>
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap text-left text-sm font-medium">
                     <button
                       @click="deleteCredential(credential.id)"
                       class="text-red-600 hover:text-red-900"
                     >
                       刪除
+                    </button>
+                    <button
+                      @click="editCredential(credential)"
+                      class="ml-4 text-blue-600 hover:text-blue-900"
+                    >
+                      編輯
                     </button>
                   </td>
                 </tr>
@@ -257,6 +269,57 @@
             </table>
           </div>
         </div>
+      </div>
+    </div>
+    
+    <!-- Edit Credential Modal -->
+    <div v-if="editingCredential" class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50">
+      <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-md">
+        <h2 class="text-xl font-semibold mb-4">更新認證資訊密碼</h2>
+        <form @submit.prevent="updateCredential">
+          <div class="mb-4">
+            <label for="edit-username" class="block text-sm font-medium text-gray-700">使用者名稱</label>
+            <input
+              type="text"
+              id="edit-username"
+              v-model="editCredentialForm.username"
+              class="mt-1 block w-full rounded-md border-gray-300 bg-gray-100 shadow-sm focus:border-blue-500 focus:ring-blue-500 cursor-not-allowed select-none"
+              placeholder="輸入使用者名稱"
+              readonly
+              disabled
+              @focus="$event.target.blur()"
+              @mousedown.prevent
+            />
+          </div>
+          
+          <div class="mb-4">
+            <label for="edit-password" class="block text-sm font-medium text-gray-700">密碼</label>
+            <input
+              type="password"
+              id="edit-password"
+              v-model="editCredentialForm.password"
+              class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+              placeholder="輸入密碼"
+              required
+            />
+          </div>
+          
+          <div class="flex justify-end space-x-3">
+            <button
+              type="button"
+              @click="cancelEditCredential"
+              class="py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            >
+              取消
+            </button>
+            <button
+              type="submit"
+              class="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            >
+              儲存
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   </div>
@@ -280,6 +343,12 @@ export default {
         credential_id: ''
       },
       newCredential: {
+        username: '',
+        password: ''
+      },
+      editingCredential: false,
+      editCredentialForm: {
+        id: null,
         username: '',
         password: ''
       },
@@ -508,7 +577,9 @@ export default {
           throw new Error('刪除認證資訊失敗');
         }
         
+        // Refresh both the credentials list and computer mappings
         await this.fetchCredentials();
+        await this.fetchAllComputerMappings();
       } catch (error) {
         console.error('刪除認證資訊失敗:', error);
         this.error = error.message;
@@ -588,6 +659,63 @@ export default {
     
     cancelCredentialEdit(computer) {
       computer.editing = false;
+    },
+    
+    editCredential(credential) {
+      this.editingCredential = true;
+      this.editCredentialForm = {
+        id: credential.id,
+        username: credential.username,
+        password: '' // Don't populate password for security reasons
+      };
+    },
+    
+    cancelEditCredential() {
+      this.editingCredential = false;
+      this.editCredentialForm = {
+        id: null,
+        username: '',
+        password: ''
+      };
+    },
+    
+    async updateCredential() {
+      this.loading = true;
+      try {
+        const response = await fetch('http://localhost:8080/api/credentials/update', {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          credentials: 'include',
+          body: JSON.stringify({
+            credential_id: this.editCredentialForm.id,
+            password: this.editCredentialForm.password
+          })
+        });
+        
+        if (!response.ok) {
+          throw new Error('更新認證資訊失敗');
+        }
+        
+        // Close the modal and reset form
+        this.editingCredential = false;
+        this.editCredentialForm = {
+          id: null,
+          username: '',
+          password: ''
+        };
+        
+        // Refresh the credentials list
+        await this.fetchCredentials();
+        // Also refresh computer mappings as they display credential usernames
+        await this.fetchAllComputerMappings();
+      } catch (error) {
+        console.error('更新認證資訊失敗:', error);
+        this.error = error.message;
+      } finally {
+        this.loading = false;
+      }
     }
   }
 };
