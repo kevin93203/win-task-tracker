@@ -1,9 +1,11 @@
 package middleware
 
 import (
+	"context"
 	"net/http"
 
 	"github.com/golang-jwt/jwt/v4"
+	"github.com/kevin93203/win-task-tracker/auth"
 )
 
 var jwtSecret = []byte("your-secret-key") // Should match the secret in auth package
@@ -23,8 +25,9 @@ func AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 			return
 		}
 
-		// Parse and validate the token
-		token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+		// Parse and validate the token with auth.Claims
+		claims := &auth.Claims{}
+		token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
 			if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 				return nil, jwt.NewValidationError("invalid signing method", jwt.ValidationErrorSignatureInvalid)
 			}
@@ -40,6 +43,9 @@ func AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 			http.Error(w, "Invalid token", http.StatusUnauthorized)
 			return
 		}
+
+		// Set user ID in context
+		r = r.WithContext(context.WithValue(r.Context(), "user_id", int64(claims.UserID)))
 
 		// Token is valid, call the next handler
 		next(w, r)

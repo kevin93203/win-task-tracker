@@ -1,107 +1,91 @@
 package auth
 
 import (
-    "database/sql"
-    "time"
-    "errors"
-    "golang.org/x/crypto/bcrypt"
-    "github.com/golang-jwt/jwt/v4"
-    _ "github.com/mattn/go-sqlite3"
-    "github.com/kevin93203/win-task-tracker/models"
+	"errors"
+	"time"
+
+	"github.com/golang-jwt/jwt/v4"
+	"github.com/kevin93203/win-task-tracker/models"
+	_ "github.com/mattn/go-sqlite3"
+	"golang.org/x/crypto/bcrypt"
 )
 
-var db *sql.DB
 var jwtSecret = []byte("your-secret-key") // In production, use environment variable
 
 type Claims struct {
-    UserID   int    `json:"user_id"`
-    Username string `json:"username"`
-    jwt.RegisteredClaims
-}
-
-func InitDB() error {
-    var err error
-    db, err = sql.Open("sqlite3", "./users.db")
-    if err != nil {
-        return err
-    }
-
-    // Create users table if not exists
-    createTable := `
-    CREATE TABLE IF NOT EXISTS users (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        username TEXT UNIQUE NOT NULL,
-        password TEXT NOT NULL
-    );`
-
-    _, err = db.Exec(createTable)
-    return err
+	UserID   int    `json:"sub"`
+	Username string `json:"username"`
+	jwt.RegisteredClaims
 }
 
 func RegisterUser(username, password string) error {
-    hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
-    if err != nil {
-        return err
-    }
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		return err
+	}
 
-    _, err = db.Exec("INSERT INTO users (username, password) VALUES (?, ?)", 
-        username, string(hashedPassword))
-    return err
+	db := models.GetDB()
+
+	_, err = db.Exec("INSERT INTO users (username, password) VALUES (?, ?)",
+		username, string(hashedPassword))
+	return err
 }
 
 func LoginUser(username, password string) (string, time.Time, error) {
-    var user models.User
-    err := db.QueryRow("SELECT id, username, password FROM users WHERE username = ?", 
-        username).Scan(&user.ID, &user.Username, &user.Password)
-    if err != nil {
-        return "", time.Time{}, errors.New("invalid credentials")
-    }
+	var user models.User
 
-    // Compare password
-    err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password))
-    if err != nil {
-        return "", time.Time{}, errors.New("invalid credentials")
-    }
+	db := models.GetDB()
+	err := db.QueryRow("SELECT id, username, password FROM users WHERE username = ?",
+		username).Scan(&user.ID, &user.Username, &user.Password)
+	if err != nil {
+		return "", time.Time{}, errors.New("invalid credentials")
+	}
 
-    // Set expiration time
-    expTime := time.Now().Add(time.Hour * 24)
+	// Compare password
+	err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password))
+	if err != nil {
+		return "", time.Time{}, errors.New("invalid credentials")
+	}
 
-    // Generate JWT token
-    claims := &Claims{
-        UserID:   user.ID,
-        Username: user.Username,
-        RegisteredClaims: jwt.RegisteredClaims{
-            ExpiresAt: jwt.NewNumericDate(expTime),
-            IssuedAt:  jwt.NewNumericDate(time.Now()),
-        },
-    }
+	// Set expiration time
+	expTime := time.Now().Add(time.Hour * 24)
 
-    token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-    tokenString, err := token.SignedString(jwtSecret)
-    if err != nil {
-        return "", time.Time{}, err
-    }
+	// Generate JWT token
+	claims := &Claims{
+		UserID:   user.ID,
+		Username: user.Username,
+		RegisteredClaims: jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(expTime),
+			IssuedAt:  jwt.NewNumericDate(time.Now()),
+		},
+	}
 
-    return tokenString, expTime, nil
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	tokenString, err := token.SignedString(jwtSecret)
+	if err != nil {
+		return "", time.Time{}, err
+	}
+
+	return tokenString, expTime, nil
 }
 
 func VerifyToken(tokenString string) (*Claims, error) {
-    claims := &Claims{}
+	claims := &Claims{}
 
-    token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
-        if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-            return nil, errors.New("unexpected signing method")
-        }
-        return jwtSecret, nil
-    })
+	token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, errors.New("unexpected signing method")
+		}
+		return jwtSecret, nil
+	})
 
-    if err != nil {
-        return nil, err
-    }
+	if err != nil {
+		return nil, err
+	}
 
-    if !token.Valid {
-        return nil, errors.New("invalid token")
-    }
+	if !token.Valid {
+		return nil, errors.New("invalid token")
+	}
 
-    return claims, nil
+	return claims, nil
 }
