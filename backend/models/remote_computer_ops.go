@@ -51,7 +51,7 @@ func CreateCredential(db *sql.DB, username, password string, userID int64) (*Cre
 	return &Credential{
 		ID:        id,
 		Username:  username,
-		Password:  password,
+		Password:  &password,
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
 	}, nil

@@ -16,7 +16,7 @@ type RemoteComputer struct {
 type Credential struct {
 	ID          int64     `json:"id"`
 	Username    string    `json:"username"`
-	Password    string    `json:"password"`
+	Password    *string   `json:"password,omitempty"`
 	CreatedAt   time.Time `json:"created_at"`
 	UpdatedAt   time.Time `json:"updated_at"`
 	CreatedByID int64     `json:"created_by_id"`
@@ -151,7 +151,7 @@ func GetComputerCredentialMappingsByUser(db *sql.DB, userID int64) ([]ComputerCr
 // GetCredentialsByUserID retrieves all credentials created by a specific user
 func GetCredentialsByUserID(db *sql.DB, userID int64) ([]Credential, error) {
 	rows, err := db.Query(`
-		SELECT id, username, password, created_at, updated_at, created_by_id
+		SELECT id, username, created_at, updated_at, created_by_id
 		FROM credentials
 		WHERE created_by_id = ?
 	`, userID)
@@ -163,7 +163,7 @@ func GetCredentialsByUserID(db *sql.DB, userID int64) ([]Credential, error) {
 	var credentials []Credential
 	for rows.Next() {
 		var cred Credential
-		err := rows.Scan(&cred.ID, &cred.Username, &cred.Password, &cred.CreatedAt, &cred.UpdatedAt, &cred.CreatedByID)
+		err := rows.Scan(&cred.ID, &cred.Username, &cred.CreatedAt, &cred.UpdatedAt, &cred.CreatedByID)
 		if err != nil {
 			return nil, err
 		}
