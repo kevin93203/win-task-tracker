@@ -2,7 +2,6 @@ package middleware
 
 import (
 	"net/http"
-	"strings"
 
 	"github.com/golang-jwt/jwt/v4"
 )
@@ -11,17 +10,16 @@ var jwtSecret = []byte("your-secret-key") // Should match the secret in auth pac
 
 func AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		// Get token from Authorization header
-		authHeader := r.Header.Get("Authorization")
-		if authHeader == "" {
-			http.Error(w, "Authorization header required", http.StatusUnauthorized)
+		// Get token from cookie
+		cookie, err := r.Cookie("jwt")
+		if err != nil {
+			http.Error(w, "Unauthorized: No JWT cookie", http.StatusUnauthorized)
 			return
 		}
 
-		// Check if the header starts with "Bearer "
-		tokenString := strings.TrimPrefix(authHeader, "Bearer ")
-		if tokenString == authHeader {
-			http.Error(w, "Invalid token format", http.StatusUnauthorized)
+		tokenString := cookie.Value
+		if tokenString == "" {
+			http.Error(w, "Unauthorized: Empty JWT", http.StatusUnauthorized)
 			return
 		}
 

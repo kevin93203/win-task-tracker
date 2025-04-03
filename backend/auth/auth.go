@@ -13,6 +13,12 @@ import (
 var db *sql.DB
 var jwtSecret = []byte("your-secret-key") // In production, use environment variable
 
+type Claims struct {
+    UserID   int    `json:"user_id"`
+    Username string `json:"username"`
+    jwt.RegisteredClaims
+}
+
 func InitDB() error {
     var err error
     db, err = sql.Open("sqlite3", "./users.db")
@@ -43,31 +49,59 @@ func RegisterUser(username, password string) error {
     return err
 }
 
-func LoginUser(username, password string) (string, error) {
+func LoginUser(username, password string) (string, time.Time, error) {
     var user models.User
     err := db.QueryRow("SELECT id, username, password FROM users WHERE username = ?", 
         username).Scan(&user.ID, &user.Username, &user.Password)
     if err != nil {
-        return "", errors.New("invalid credentials")
+        return "", time.Time{}, errors.New("invalid credentials")
     }
 
     // Compare password
     err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password))
     if err != nil {
-        return "", errors.New("invalid credentials")
+        return "", time.Time{}, errors.New("invalid credentials")
     }
+
+    // Set expiration time
+    expTime := time.Now().Add(time.Hour * 24)
 
     // Generate JWT token
-    token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-        "user_id":  user.ID,
-        "username": user.Username,
-        "exp":      time.Now().Add(time.Hour * 24).Unix(),
-    })
-
-    tokenString, err := token.SignedString(jwtSecret)
-    if err != nil {
-        return "", err
+    claims := &Claims{
+        UserID:   user.ID,
+        Username: user.Username,
+        RegisteredClaims: jwt.RegisteredClaims{
+            ExpiresAt: jwt.NewNumericDate(expTime),
+            IssuedAt:  jwt.NewNumericDate(time.Now()),
+        },
     }
 
-    return tokenString, nil
+    token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+    tokenString, err := token.SignedString(jwtSecret)
+    if err != nil {
+        return "", time.Time{}, err
+    }
+
+    return tokenString, expTime, nil
+}
+
+func VerifyToken(tokenString string) (*Claims, error) {
+    claims := &Claims{}
+
+    token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
+        if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+            return nil, errors.New("unexpected signing method")
+        }
+        return jwtSecret, nil
+    })
+
+    if err != nil {
+        return nil, err
+    }
+
+    if !token.Valid {
+        return nil, errors.New("invalid token")
+    }
+
+    return claims, nil
 }

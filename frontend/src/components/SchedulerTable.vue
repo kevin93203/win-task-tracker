@@ -168,9 +168,11 @@
  <script>
  import axios from 'axios';
  import { ref, computed, onMounted } from 'vue';
- 
+ import { useRouter } from 'vue-router';
+
  export default {
   setup() {
+    const router = useRouter();
     const jobs = ref([]);
     const loading = ref(true);
     const error = ref(null);
@@ -183,11 +185,26 @@
       error.value = null;
       
       try {
-        const response = await axios.get('http://localhost:8080/api/tasks');
+        // 從 cookie 中獲取 JWT
+        const cookies = document.cookie.split(';');
+        const jwtCookie = cookies.find(cookie => cookie.trim().startsWith('jwt='));
+        const jwt = jwtCookie ? jwtCookie.split('=')[1].trim() : null;
+
+        const response = await axios.get('http://localhost:8080/api/tasks', {
+          withCredentials: true,
+          headers: {
+            'Authorization': `Bearer ${jwt}`
+          }
+        });
         jobs.value = response.data;
       } catch (err) {
         console.error(err);
-        error.value = '無法載入排程工作資訊，請稍後再試。';
+        if (err.response && err.response.status === 401) {
+          // Unauthorized, redirect to login
+          router.push({ name: 'Login', query: { redirect: router.currentRoute.value.fullPath } });
+        } else {
+          error.value = '無法載入排程工作資訊，請稍後再試。';
+        }
       } finally {
         loading.value = false;
       }

@@ -123,16 +123,6 @@ func getHostConfig(config_file string) ([]RemoteHost, error) {
 }
 
 func GetTasksHandler(w http.ResponseWriter, r *http.Request) {
-	// 設置 CORS 標頭
-	w.Header().Set("Access-Control-Allow-Origin", "*")
-	w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
-
-	// 處理 OPTIONS 請求
-	if r.Method == http.MethodOptions {
-		w.WriteHeader(http.StatusNoContent)
-		return
-	}
 
 	remoteHosts, err := getHostConfig("config.json")
 	if err != nil {

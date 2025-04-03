@@ -16,12 +16,14 @@ func main() {
 		return
 	}
 
-	// Authentication endpoints
-	http.HandleFunc("/api/register", handlers.RegisterHandler)
-	http.HandleFunc("/api/login", handlers.LoginHandler)
+	// Authentication endpoints with CORS
+	http.HandleFunc("/api/register", middleware.CorsMiddleware(handlers.RegisterHandler))
+	http.HandleFunc("/api/login", middleware.CorsMiddleware(handlers.LoginHandler))
+	http.HandleFunc("/api/verify", middleware.CorsMiddleware(middleware.AuthMiddleware(handlers.VerifyHandler)))
+	http.HandleFunc("/api/logout", middleware.CorsMiddleware(handlers.LogoutHandler))
 
-	// Protected endpoints with JWT authentication
-	http.HandleFunc("/api/tasks", middleware.AuthMiddleware(handlers.GetTasksHandler))
+	// Protected endpoints with JWT authentication and CORS
+	http.HandleFunc("/api/tasks", middleware.CorsMiddleware(middleware.AuthMiddleware(handlers.GetTasksHandler)))
 
 	fmt.Println("Server is running on :8080")
 	if err := http.ListenAndServe(":8080", nil); err != nil {

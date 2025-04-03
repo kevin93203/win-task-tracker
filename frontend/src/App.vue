@@ -1,15 +1,11 @@
 <template>
   <div id="app">
-    <SchedulerTable />
+    <router-view></router-view>
   </div>
 </template>
 
 <script>
-import SchedulerTable from './components/SchedulerTable.vue';
-
 export default {
-  components: {
-    SchedulerTable
-  }
+  name: 'App'
 };
 </script>
