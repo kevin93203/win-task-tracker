@@ -98,7 +98,7 @@ func LogoutHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Clear the JWT cookie
+	// Clear the JWT cookie by setting an expired cookie
 	http.SetCookie(w, &http.Cookie{
 		Name:     "jwt",
 		Value:    "",

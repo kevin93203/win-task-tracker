@@ -1,25 +1,27 @@
 <template>
-  <div class="container mx-auto px-4 py-8">
-    <header class="mb-6">
-      <h1 class="text-3xl font-bold text-gray-800">Windows 排程器工作資訊</h1>
-      <p class="text-gray-600 mt-2">顯示所有排程工作的狀態和詳細資訊</p>
-    </header>
-    
-    <!-- 加載狀態 -->
-    <div v-if="loading" class="flex justify-center my-12">
-      <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
-    </div>
-    
-    <!-- 錯誤提示 -->
-    <div v-else-if="error" class="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded mb-6">
-      <p class="font-bold">載入失敗</p>
-      <p>{{ error }}</p>
-    </div>
- 
-    <!-- 主要內容 -->
-    <div v-else>
-      <!-- 搜尋和過濾功能 -->
-      <div class="flex flex-col md:flex-row justify-between mb-6 gap-4">
+  <div class="flex">
+    <Sidebar ref="sidebar" />
+    <div class="flex-1 p-8 transition-all duration-300" :class="{ 'ml-64': isSidebarOpen, 'ml-0': !isSidebarOpen }">
+      <header class="mb-6">
+        <h1 class="text-3xl font-bold text-gray-800">Windows 排程器工作資訊</h1>
+        <p class="text-gray-600 mt-2">顯示所有排程工作的狀態和詳細資訊</p>
+      </header>
+      
+      <!-- 加載狀態 -->
+      <div v-if="loading" class="flex justify-center my-12">
+        <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+      </div>
+      
+      <!-- 錯誤提示 -->
+      <div v-else-if="error" class="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded mb-6">
+        <p class="font-bold">載入失敗</p>
+        <p>{{ error }}</p>
+      </div>
+   
+      <!-- 主要內容 -->
+      <div v-else>
+        <!-- 搜尋和過濾功能 -->
+        <div class="flex flex-col md:flex-row justify-between mb-6 gap-4">
         <div class="relative w-full md:w-1/3">
           <input
             v-model="searchQuery"
@@ -160,25 +162,32 @@
         </svg>
         <h3 class="text-xl font-medium mb-2">沒有找到符合條件的工作</h3>
         <p>嘗試調整搜尋條件或重新整理資料</p>
+        </div>
       </div>
     </div>
   </div>
- </template>
+</template>
  
  <script>
- import axios from 'axios';
- import { ref, computed, onMounted } from 'vue';
- import { useRouter } from 'vue-router';
+import axios from 'axios';
+import { ref, computed, onMounted } from 'vue';
+import { useRouter } from 'vue-router';
+import Sidebar from './Sidebar.vue';
 
  export default {
+  components: {
+    Sidebar
+  },
   setup() {
     const router = useRouter();
+    const sidebar = ref(null);
     const jobs = ref([]);
     const loading = ref(true);
     const error = ref(null);
     const searchQuery = ref('');
     const statusFilter = ref('Ready');
     const computerFilter = ref('');
+    const isSidebarOpen = computed(() => sidebar.value?.isOpen ?? true);
 
     const fetchJobs = async () => {
       loading.value = true;
@@ -201,7 +210,7 @@
         console.error(err);
         if (err.response && err.response.status === 401) {
           // Unauthorized, redirect to login
-          router.push({ name: 'Login', query: { redirect: router.currentRoute.value.fullPath } });
+          router.push({ name: 'SchedulerTable', query: { redirect: router.currentRoute.value.fullPath } });
         } else {
           error.value = '無法載入排程工作資訊，請稍後再試。';
         }
@@ -341,13 +350,16 @@
       computerFilter,
       uniqueComputers,
       filteredJobs,
-      getTriggers,
-      getCommands,
+      fetchJobs,
+      refreshJobs,
       formatDateTime,
       getStatusClass,
-      getStatusChinese,
       getResultClass,
-      refreshJobs
+      getCommands,
+      getTriggers,
+      getStatusChinese,
+      sidebar,
+      isSidebarOpen
     };
   }
  };

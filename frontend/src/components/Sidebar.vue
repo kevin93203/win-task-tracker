@@ -1,0 +1,118 @@
+<template>
+  <div>
+    <!-- Sidebar -->
+    <div class="sidebar bg-white shadow-lg h-screen fixed left-0 top-0 w-64 transition-transform duration-300 z-20" :class="{ '-translate-x-64': !isOpen }">
+      <!-- Logo/Brand -->
+      <div class="p-4 border-b border-gray-200 flex justify-between items-center">
+        <h2 class="text-xl font-bold text-gray-800">任務管理系統</h2>
+        <button @click="toggleSidebar" class="md:hidden text-gray-500 hover:text-gray-700">
+          <svg class="h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+
+      <!-- Navigation Links -->
+      <nav class="p-4">
+        <router-link 
+          to="/" 
+          class="flex items-center px-4 py-2 text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded-lg mb-2"
+          :class="{ 'bg-blue-50 text-blue-600': $route.path === '/' }"
+        >
+          <svg class="h-5 w-5 mr-3" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+            <path d="M5 3a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2V5a2 2 0 00-2-2H5zM5 11a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2v-2a2 2 0 00-2-2H5zM11 5a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V5zM11 13a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+          </svg>
+          排程工作
+        </router-link>
+      </nav>
+
+      <!-- Bottom Section with Logout -->
+      <div class="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-200">
+        <button 
+          @click="handleLogout" 
+          class="flex items-center w-full px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg"
+        >
+          <svg class="h-5 w-5 mr-3" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M3 3a1 1 0 00-1 1v12a1 1 0 001 1h12a1 1 0 001-1V4a1 1 0 00-1-1H3zm11 4.414l-4.293 4.293a1 1 0 01-1.414 0L4 7.414V15h10V7.414z" clip-rule="evenodd" />
+          </svg>
+          登出
+        </button>
+      </div>
+    </div>
+
+    <!-- Toggle Button for Mobile -->
+    <button 
+      @click="toggleSidebar" 
+      class="fixed top-4 left-4 z-30 md:hidden bg-white p-2 rounded-lg shadow-lg hover:bg-gray-100"
+      v-show="!isOpen"
+    >
+      <svg class="h-6 w-6 text-gray-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+      </svg>
+    </button>
+
+    <!-- Toggle Button for Desktop -->
+    <button 
+      @click="toggleSidebar" 
+      class="fixed left-64 top-4 bg-white p-2 rounded-r-lg shadow-md hover:bg-gray-100 transition-transform duration-300 hidden md:block"
+      :class="{ 'translate-x-[-256px]': !isOpen }"
+    >
+      <svg 
+        class="h-6 w-6 text-gray-600 transition-transform duration-300" 
+        :class="{ 'rotate-180': !isOpen }"
+        xmlns="http://www.w3.org/2000/svg" 
+        viewBox="0 0 20 20" 
+        fill="currentColor"
+      >
+        <path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd" />
+      </svg>
+    </button>
+  </div>
+</template>
+
+<style scoped>
+.sidebar {
+  transition: transform 0.3s ease;
+}
+</style>
+
+<script>
+import { ref } from 'vue';
+import { useRouter } from 'vue-router';
+
+export default {
+  name: 'Sidebar',
+  setup() {
+    const router = useRouter();
+    const isOpen = ref(true);
+
+    const toggleSidebar = () => {
+      isOpen.value = !isOpen.value;
+    };
+
+    const handleLogout = async () => {
+      try {
+        await fetch('http://localhost:8080/api/logout', {
+          method: 'POST',
+          credentials: 'include',
+        });
+        router.push('/login');
+      } catch (error) {
+        console.error('Logout failed:', error);
+      }
+    };
+
+    return {
+      isOpen,
+      toggleSidebar,
+      handleLogout
+    };
+  }
+};
+</script>
+
+<style scoped>
+.sidebar {
+  z-index: 1000;
+}
+</style>
