@@ -91,6 +91,7 @@
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { globalState } from '../main';
+import authService from '../services/authService';
 
 export default {
   name: 'Sidebar',
@@ -114,10 +115,7 @@ export default {
 
     const handleLogout = async () => {
       try {
-        await fetch('http://localhost:8080/api/logout', {
-          method: 'POST',
-          credentials: 'include',
-        });
+        await authService.logout();
         router.push('/login');
       } catch (error) {
         console.error('Logout failed:', error);

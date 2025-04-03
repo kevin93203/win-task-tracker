@@ -2,6 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router';
 import Login from '../components/Login.vue';
 import SchedulerTable from '../components/SchedulerTable.vue';
 import RemoteComputers from '../components/RemoteComputers.vue';
+import authService from '../services/authService';
 
 const routes = [
   {
@@ -30,19 +31,19 @@ const router = createRouter({
 });
 
 // Navigation guard
-router.beforeEach((to, from, next) => {
+router.beforeEach(async (to, from, next) => {
   // Check if route requires authentication
   if (to.matched.some(record => record.meta.requiresAuth !== false)) {
-    // Check if JWT cookie exists
-    const cookies = document.cookie.split(';');
-    const hasJwtCookie = cookies.some(cookie => cookie.trim().startsWith('jwt='));
-    if (!hasJwtCookie) {
-      // No JWT cookie found, redirect to login
+    // Check authentication status with the backend
+    const isAuthenticated = await authService.isAuthenticated();
+    
+    if (!isAuthenticated) {
+      // Not authenticated, redirect to login
       next({ name: 'Login', query: { redirect: to.fullPath } });
       return;
     }
 
-    // JWT cookie exists, verify it
+    // Authenticated, proceed
     next();
   } else {
     next();

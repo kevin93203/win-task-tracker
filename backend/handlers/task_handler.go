@@ -169,7 +169,6 @@ func GetTasksHandler(w http.ResponseWriter, r *http.Request) {
 	// 獲取用戶的電腦憑證
 	db := models.GetDB()
 	remoteHosts, err := getHostsFromCredentials(db, int64(claims.UserID))
-	fmt.Printf("Remote Hosts: %+v\n", remoteHosts)
 
 	if err != nil {
 		http.Error(w, fmt.Sprintf("獲取電腦憑證失敗: %v", err), http.StatusInternalServerError)

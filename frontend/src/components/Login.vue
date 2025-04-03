@@ -32,9 +32,9 @@
 </template>
 
 <script>
-import axios from 'axios';
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
+import authService from '../services/authService';
 
 export default {
   name: 'Login',
@@ -47,15 +47,10 @@ export default {
     const handleLogin = async () => {
       try {
         isLoading.value = true;
-        const response = await axios.post('http://localhost:8080/api/login', {
+        await authService.login({
           username: username.value,
           password: password.value,
-        }, {
-          withCredentials: true
         });
-
-        const { token } = response.data;
-        // JWT token will be handled by the HTTP-only cookie from backend
         
         // Redirect to home page after successful login
         router.push('/');
