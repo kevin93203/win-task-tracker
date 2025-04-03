@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router';
 import Login from '../components/Login.vue';
 import SchedulerTable from '../components/SchedulerTable.vue';
+import RemoteComputers from '../components/RemoteComputers.vue';
 
 const routes = [
   {
@@ -14,6 +15,12 @@ const routes = [
     name: 'Login',
     component: Login,
     meta: { requiresAuth: false }
+  },
+  {
+    path: '/remote-computers',
+    name: 'RemoteComputers',
+    component: RemoteComputers,
+    meta: { requiresAuth: true }
   },
 ];
 

@@ -41,6 +41,7 @@ import JobCard from './scheduler/JobCard.vue';
 import LoadingSpinner from './scheduler/LoadingSpinner.vue';
 import ErrorMessage from './scheduler/ErrorMessage.vue';
 import NoResults from './scheduler/NoResults.vue';
+import { globalState } from '../main';
 
 export default {
   components: {
@@ -54,14 +55,13 @@ export default {
   },
   setup() {
     const router = useRouter();
-    const sidebar = ref(null);
     const jobs = ref([]);
     const loading = ref(true);
     const error = ref(null);
     const searchQuery = ref('');
     const statusFilter = ref('Ready');
     const computerFilter = ref('');
-    const isSidebarOpen = computed(() => sidebar.value?.isOpen ?? true);
+    const isSidebarOpen = computed(() => globalState.sidebarOpen);
 
     const fetchJobs = async () => {
       loading.value = true;
@@ -130,7 +130,6 @@ export default {
       filteredJobs,
       fetchJobs,
       refreshJobs,
-      sidebar,
       isSidebarOpen
     };
   }
