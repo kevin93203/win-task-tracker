@@ -2,14 +2,11 @@ package models
 
 import (
 	"database/sql"
-	"fmt"
 	"time"
 )
 
 // CreateRemoteComputer creates a new remote computer record
 func CreateRemoteComputer(db *sql.DB, name string, createdByID int64) (*RemoteComputer, error) {
-	fmt.Printf("Creating remote computer: %s\n", name)
-	fmt.Printf("Created by user ID: %d\n", createdByID)
 	result, err := db.Exec(`
 		INSERT INTO remote_computers (name, created_by_id)
 		VALUES (?, ?)
