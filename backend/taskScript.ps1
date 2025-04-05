@@ -55,12 +55,6 @@ $tasks = Invoke-Command -Session $session -ScriptBlock {
         $root.AppendChild($importNode) | Out-Null
     }
 
-    # 指定輸出檔案的路徑
-    $outputPath = "output.xml"
-
-    # 將 xmlDoc 輸出成 XML 檔案
-    $xmlDoc.Save($outputPath)
-
     return $xmlDoc.OuterXml
 }
 
