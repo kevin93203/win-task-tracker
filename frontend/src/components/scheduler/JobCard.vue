@@ -5,9 +5,19 @@
         <h2 class="font-bold text-lg text-gray-800 truncate" :title="job.ExtraInfo.TaskName">
           {{ job.ExtraInfo.TaskName }}
         </h2>
-        <span :class="getStatusClass(job.ExtraInfo.State)" class="px-2 py-1 rounded-full text-xs font-bold">
-          {{ getStatusChinese(job.ExtraInfo.State) }}
-        </span>
+        <div class="flex items-center gap-2">
+          <button 
+            v-if="job.ExtraInfo.State !== 'Disabled'"
+            @click="disableTask" 
+            class="text-xs px-2 py-1 text-red-600 hover:text-red-800 hover:bg-red-50 rounded transition-colors"
+            :disabled="isDisabling"
+          >
+            {{ isDisabling ? '停用中...' : '停用任務' }}
+          </button>
+          <span :class="getStatusClass(job.ExtraInfo.State)" class="px-2 py-1 rounded-full text-xs font-bold">
+            {{ getStatusChinese(job.ExtraInfo.State) }}
+          </span>
+        </div>
       </div>
       <p v-if="job.RegistrationInfo.Description" class="text-sm text-gray-600">
         {{ job.RegistrationInfo.Description }}
@@ -92,8 +102,13 @@
 </template>
 
 <script>
+import { ref } from 'vue'
+import { useToast } from 'vue-toastification'
+import axios from 'axios'
+
 export default {
   name: 'JobCard',
+  emits: ['task-disabled'],
   props: {
     job: {
       type: Object,
@@ -141,6 +156,68 @@ export default {
       return result;
     }
   },
+  setup(props, { emit }) {
+    const toast = useToast()
+    const isDisabling = ref(false)
+
+    const disableTask = async () => {
+      if (isDisabling.value) return
+
+      try {
+        isDisabling.value = true
+
+        // 取得 JWT token
+        const cookies = document.cookie.split(';')
+        const jwtCookie = cookies.find(cookie => cookie.trim().startsWith('jwt='))
+        const jwt = jwtCookie ? jwtCookie.split('=')[1].trim() : null
+
+        const response = await axios.post(
+          'http://localhost:8080/api/tasks/disable',
+          {
+            computer_id: props.job.ExtraInfo.ComputerID,
+            task_name: props.job.ExtraInfo.TaskName
+          },
+          {
+            withCredentials: true,
+            headers: {
+              'Authorization': `Bearer ${jwt}`
+            }
+          }
+        )
+
+        const result = response.data
+
+        if (result.success) {
+          toast.success('任務已停用')
+          emit('task-disabled', {
+            computerID: props.job.ExtraInfo.ComputerID,
+            taskName: props.job.ExtraInfo.TaskName
+          })
+        } else {
+          throw new Error(result.error || '停用任務失敗')
+        }
+      } catch (error) {
+        if (error.response) {
+          // 後端回傳的錯誤
+          toast.error(error.response.data.error || '停用任務失敗')
+        } else if (error.request) {
+          // 網路連線問題
+          toast.error('網路連線失敗，請稍後再試')
+        } else {
+          // 其他錯誤
+          toast.error(error.message || '停用任務失敗')
+        }
+      } finally {
+        isDisabling.value = false
+      }
+    }
+
+    return {
+      isDisabling,
+      disableTask
+    }
+  },
+
   methods: {
     formatDateTime(dateTime) {
       if (!dateTime) return '無';

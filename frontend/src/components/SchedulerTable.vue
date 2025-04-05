@@ -22,6 +22,7 @@
             v-for="job in filteredJobs"
             :key="job.ExtraInfo.ComputerName + job.RegistrationInfo.URI"
             :job="job"
+            @task-disabled="handleTaskDisabled"
           />
         </div>
         
@@ -69,6 +70,22 @@ export default {
     // 確保jobs.value永遠是陣列
     const ensureJobsArray = computed(() => jobs.value || []);
     const isSidebarOpen = computed(() => globalState.sidebarOpen);
+
+    const handleTaskDisabled = ({ computerID, taskName }) => {
+      // 更新本地狀態
+      jobs.value = jobs.value.map(job => {
+        if (job.ExtraInfo.ComputerID === computerID && job.ExtraInfo.TaskName === taskName) {
+          return {
+            ...job,
+            ExtraInfo: {
+              ...job.ExtraInfo,
+              State: 'Disabled'
+            }
+          }
+        }
+        return job
+      })
+    }
 
     const fetchJobs = async () => {
       loading.value = true;
@@ -134,17 +151,17 @@ export default {
  
     return {
       jobs,
+      taskErrors,
       loading,
       error,
-      taskErrors,
       searchQuery,
       statusFilter,
       computerFilter,
-      uniqueComputers,
       filteredJobs,
-      fetchJobs,
+      uniqueComputers,
+      isSidebarOpen,
       refreshJobs,
-      isSidebarOpen
+      handleTaskDisabled
     };
   }
 };
