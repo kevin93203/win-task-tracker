@@ -6,7 +6,6 @@ import (
 	"encoding/xml"
 	"fmt"
 	"net/http"
-	"os"
 	"os/exec"
 	"sync"
 
@@ -108,6 +107,7 @@ type DisableTaskResponse struct {
 func executeCommand(command string, host RemoteHost, wg *sync.WaitGroup, results chan<- ScheduledTasks, errChan chan<- TaskError) {
 	defer wg.Done()
 
+	fmt.Println("Executing command:", command)
 	cmd := exec.Command("powershell", "-Command", command)
 	output, err := cmd.Output()
 	if err != nil {
@@ -208,11 +208,11 @@ func DisableTaskHandler(w http.ResponseWriter, r *http.Request) {
 
 	// 使用 PowerShell 腳本停用任務
 	cmd := fmt.Sprintf(
-		"powershell -File ./disableTask.ps1 "+
-		"-TaskName '%s' "+
-		"-UserName '%s' "+
-		"-Password '%s' "+
-		"-ComputerName '%s'",
+		"powershell -File ./scripts/disableTask.ps1 "+
+			"-TaskName '%s' "+
+			"-UserName '%s' "+
+			"-Password '%s' "+
+			"-ComputerName '%s'",
 		req.TaskName,
 		targetHost.UserName,
 		targetHost.Password,
@@ -270,17 +270,17 @@ func GetTasksHandler(w http.ResponseWriter, r *http.Request) {
 	results := make(chan ScheduledTasks, len(remoteHosts))
 	errChan := make(chan TaskError, len(remoteHosts))
 
-	// 讀取 PowerShell 腳本
-	script, err := os.ReadFile("taskScript.ps1")
-	if err != nil {
-		http.Error(w, "無法讀取 PowerShell 腳本", http.StatusInternalServerError)
-		return
-	}
-
 	// 執行每個電腦的命令
 	for _, host := range remoteHosts {
-		command := fmt.Sprintf(string(script),
-			host.Password, host.UserName, host.ComputerName, host.UserName)
+		command := fmt.Sprintf(
+			"powershell -File ./scripts/getTasks.ps1 "+
+				"-UserName '%s' "+
+				"-Password '%s' "+
+				"-ComputerName '%s'",
+			host.UserName,
+			host.Password,
+			host.ComputerName,
+		)
 		wg.Add(1)
 		go executeCommand(command, host, &wg, results, errChan)
 	}
