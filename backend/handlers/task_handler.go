@@ -94,6 +94,17 @@ type TaskResponse struct {
 	Errors []TaskError `json:"errors,omitempty"`
 }
 
+type DisableTaskRequest struct {
+	ComputerName string `json:"computer_name"`
+	TaskName     string `json:"task_name"`
+}
+
+type DisableTaskResponse struct {
+	Success bool   `json:"success"`
+	Message string `json:"message,omitempty"`
+	Error   string `json:"error,omitempty"`
+}
+
 func executeCommand(command string, host RemoteHost, wg *sync.WaitGroup, results chan<- ScheduledTasks, errChan chan<- TaskError) {
 	defer wg.Done()
 
@@ -150,6 +161,79 @@ func getHostsFromCredentials(db *sql.DB, userID int64) ([]RemoteHost, error) {
 	}
 
 	return hosts, nil
+}
+
+// DisableTaskHandler handles the request to disable a scheduled task on a remote computer
+func DisableTaskHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Get user ID from context (set by auth middleware)
+	userID := r.Context().Value("user_id").(int64)
+
+	// Parse request body
+	var req DisableTaskRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	// Get database connection
+	db := models.GetDB()
+
+	// Get hosts from credentials
+	hosts, err := getHostsFromCredentials(db, userID)
+	if err != nil {
+		http.Error(w, "Failed to get host credentials", http.StatusInternalServerError)
+		return
+	}
+
+	// Find the target host
+	var targetHost RemoteHost
+	hostFound := false
+	for _, host := range hosts {
+		if host.ComputerName == req.ComputerName {
+			targetHost = host
+			hostFound = true
+			break
+		}
+	}
+
+	if !hostFound {
+		http.Error(w, "Computer not found in user's credentials", http.StatusNotFound)
+		return
+	}
+
+	// 使用 PowerShell 腳本停用任務
+	cmd := fmt.Sprintf(
+		"powershell -File ./disableTask.ps1 "+
+		"-TaskName '%s' "+
+		"-UserName '%s' "+
+		"-Password '%s' "+
+		"-ComputerName '%s'",
+		req.TaskName,
+		targetHost.UserName,
+		targetHost.Password,
+		targetHost.ComputerName,
+	)
+
+	// Execute the command
+	powershell := exec.Command("powershell", "-Command", cmd)
+	output, err := powershell.CombinedOutput()
+
+	response := DisableTaskResponse{}
+	if err != nil {
+		response.Success = false
+		response.Error = fmt.Sprintf("Failed to disable task: %s - %s", err.Error(), string(output))
+	} else {
+		response.Success = true
+		response.Message = fmt.Sprintf("Successfully disabled task '%s' on computer '%s'", req.TaskName, req.ComputerName)
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
 }
 
 func GetTasksHandler(w http.ResponseWriter, r *http.Request) {
