@@ -68,17 +68,19 @@ type Exec struct {
 }
 
 type ExtraInfo struct {
-	TaskName       string `xml:"TaskName"`
-	ComputerName   string `xml:"ComputerName"`
-	State          string `xml:"State"`
-	LastRunTime    string `xml:"LastRunTime"`
-	NextRunTime    string `xml:"NextRunTime"`
-	LastTaskResult int    `xml:"LastTaskResult"`
+	TaskName       string `xml:"TaskName" json:"TaskName"`
+	ComputerName   string `xml:"ComputerName" json:"ComputerName"`
+	ComputerID     int64  `xml:"ComputerID" json:"ComputerID"`
+	State          string `xml:"State" json:"State"`
+	LastRunTime    string `xml:"LastRunTime" json:"LastRunTime"`
+	NextRunTime    string `xml:"NextRunTime" json:"NextRunTime"`
+	LastTaskResult int    `xml:"LastTaskResult" json:"LastTaskResult"`
 }
 
 type RemoteHost struct {
 	UserName     string `json:"username"`
 	Password     string `json:"password"`
+	ComputerID   int64  `json:"computer_id"`
 	ComputerName string `json:"computer_name"`
 }
 
@@ -94,8 +96,8 @@ type TaskResponse struct {
 }
 
 type DisableTaskRequest struct {
-	ComputerName string `json:"computer_name"`
-	TaskName     string `json:"task_name"`
+	ComputerID int64  `json:"computer_id"`
+	TaskName   string `json:"task_name"`
 }
 
 type DisableTaskResponse struct {
@@ -107,7 +109,6 @@ type DisableTaskResponse struct {
 func executeCommand(command string, host RemoteHost, wg *sync.WaitGroup, results chan<- ScheduledTasks, errChan chan<- TaskError) {
 	defer wg.Done()
 
-	fmt.Println("Executing command:", command)
 	cmd := exec.Command("powershell", "-Command", command)
 	output, err := cmd.Output()
 	if err != nil {
@@ -156,6 +157,7 @@ func getHostsFromCredentials(db *sql.DB, userID int64) ([]RemoteHost, error) {
 		hosts = append(hosts, RemoteHost{
 			UserName:     *mapping.CredentialUsername,
 			Password:     password,
+			ComputerID:   mapping.ComputerID,
 			ComputerName: mapping.ComputerName,
 		})
 	}
@@ -183,27 +185,43 @@ func DisableTaskHandler(w http.ResponseWriter, r *http.Request) {
 	// Get database connection
 	db := models.GetDB()
 
-	// Get hosts from credentials
-	hosts, err := getHostsFromCredentials(db, userID)
+	// 從資料庫中獲取電腦資訊
+	computer, err := models.GetComputerByID(db, req.ComputerID)
 	if err != nil {
-		http.Error(w, "Failed to get host credentials", http.StatusInternalServerError)
+		http.Error(w, fmt.Sprintf("Failed to get computer info: %v", err), http.StatusInternalServerError)
 		return
 	}
 
-	// Find the target host
-	var targetHost RemoteHost
-	hostFound := false
-	for _, host := range hosts {
-		if host.ComputerName == req.ComputerName {
-			targetHost = host
-			hostFound = true
-			break
-		}
+	// 檢查用戶是否有權限訪問該電腦
+	hasAccess, err := models.CheckUserComputerAccess(db, userID, req.ComputerID)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Failed to check computer access: %v", err), http.StatusInternalServerError)
+		return
 	}
 
-	if !hostFound {
-		http.Error(w, "Computer not found in user's credentials", http.StatusNotFound)
+	if !hasAccess {
+		http.Error(w, "Unauthorized access to computer", http.StatusForbidden)
 		return
+	}
+
+	// 獲取電腦的認證資訊
+	credential, err := models.GetComputerCredential(db, req.ComputerID)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Failed to get computer credentials: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	// 檢查是否有認證資訊
+	if credential == nil || credential.Password == nil {
+		http.Error(w, "No valid credentials found for this computer", http.StatusBadRequest)
+		return
+	}
+
+	// 準備遠端主機資訊
+	targetHost := RemoteHost{
+		UserName:     credential.Username,
+		Password:     *credential.Password,
+		ComputerName: computer.Name,
 	}
 
 	// 使用 PowerShell 腳本停用任務
@@ -229,7 +247,7 @@ func DisableTaskHandler(w http.ResponseWriter, r *http.Request) {
 		response.Error = fmt.Sprintf("Failed to disable task: %s - %s", err.Error(), string(output))
 	} else {
 		response.Success = true
-		response.Message = fmt.Sprintf("Successfully disabled task '%s' on computer '%s'", req.TaskName, req.ComputerName)
+		response.Message = fmt.Sprintf("Successfully disabled task '%s' on computer '%s'", req.TaskName, computer.Name)
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -276,9 +294,11 @@ func GetTasksHandler(w http.ResponseWriter, r *http.Request) {
 			"powershell -File ./scripts/getTasks.ps1 "+
 				"-UserName '%s' "+
 				"-Password '%s' "+
+				"-ComputerID %d "+
 				"-ComputerName '%s'",
 			host.UserName,
 			host.Password,
+			host.ComputerID,
 			host.ComputerName,
 		)
 		wg.Add(1)

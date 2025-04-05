@@ -4,6 +4,8 @@
     [Parameter(Mandatory=$true)]
     [string]$Password,
     [Parameter(Mandatory=$true)]
+    [int64]$ComputerID,
+    [Parameter(Mandatory=$true)]
     [string]$ComputerName
 )
 
@@ -20,7 +22,7 @@ try {
 
     # 在遠端執行獲取排程任務的指令
     $tasks = Invoke-Command -Session $session -ScriptBlock {
-        param($userName)
+        param($userName, $computerID)
         
         $hostname = hostname
         $xmlDoc = New-Object System.Xml.XmlDocument
@@ -36,17 +38,21 @@ try {
             $tempDoc = New-Object System.Xml.XmlDocument
             $tempDoc.LoadXml($taskXml)
 
-            # # 檢查 Author，分割並取最後一段
-            # $author = $tempDoc.Task.RegistrationInfo.Author
-            # $authorName = if ($author) { $author.Split("\")[-1] } else { "" }
-            # if ($authorName -ne $userName) {
-            #     return
-            # }
+            # 檢查 Author，分割並取最後一段
+            $author = $tempDoc.Task.RegistrationInfo.Author
+            $authorName = if ($author) { $author.Split("\")[-1] } else { "" }
+            if ($authorName -ne $userName) {
+                return
+            }
 
             # 添加額外的節點
             $extraInfo = $tempDoc.CreateElement("ExtraInfo")
             $taskName = $tempDoc.CreateElement("TaskName")
             $taskName.InnerText = $task.TaskName
+            
+            $computerIDElement = $tempDoc.CreateElement("ComputerID")
+            $computerIDElement.InnerText = $computerID
+            
             $computerName = $tempDoc.CreateElement("ComputerName")
             $computerName.InnerText = $hostname
             $state = $tempDoc.CreateElement("State")
@@ -59,6 +65,7 @@ try {
             $lastTaskResult.InnerText = if ($taskInfo.LastTaskResult) { $taskInfo.LastTaskResult.ToString() } else { 0 }
 
             $extraInfo.AppendChild($taskName) | Out-Null
+            $extraInfo.AppendChild($computerIDElement) | Out-Null
             $extraInfo.AppendChild($computerName) | Out-Null
             $extraInfo.AppendChild($state) | Out-Null
             $extraInfo.AppendChild($lastRunTime) | Out-Null
@@ -71,7 +78,7 @@ try {
         }
 
         return $xmlDoc.OuterXml
-    } -ArgumentList $UserName
+    } -ArgumentList $UserName, $ComputerID
 
     # 輸出結果
     Write-Output $tasks

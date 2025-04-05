@@ -204,9 +204,106 @@ func UpdateCredentialPassword(db *sql.DB, credentialID int64, newPassword string
 // UpdateComputerCredentialMapping updates the mapping between a computer and credential
 func UpdateComputerCredentialMapping(db *sql.DB, computerCredentialMappingID int64, credentialID int64, userID int64) error {
 	_, err := db.Exec(`
-		UPDATE computer_credential_mappings
-		SET credential_id = ?, updated_at = CURRENT_TIMESTAMP
-		WHERE id = ?
-	`, credentialID, computerCredentialMappingID)
+		UPDATE computer_credential_mappings 
+		SET credential_id = ?, updated_at = CURRENT_TIMESTAMP 
+		WHERE id = ? AND created_by_id = ?
+	`, credentialID, computerCredentialMappingID, userID)
 	return err
+}
+
+// GetComputerByID retrieves a computer by its ID
+func GetComputerByID(db *sql.DB, computerID int64) (*RemoteComputer, error) {
+	var computer RemoteComputer
+	err := db.QueryRow(`
+		SELECT id, name, created_at, updated_at, created_by_id
+		FROM remote_computers
+		WHERE id = ?
+	`, computerID).Scan(
+		&computer.ID,
+		&computer.Name,
+		&computer.CreatedAt,
+		&computer.UpdatedAt,
+		&computer.CreatedByID,
+	)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &computer, nil
+}
+
+// GetComputerByName retrieves a computer by its name
+func GetComputerByName(db *sql.DB, computerName string) (*RemoteComputer, error) {
+	var computer RemoteComputer
+	err := db.QueryRow(`
+		SELECT id, name, created_at, updated_at, created_by_id
+		FROM remote_computers
+		WHERE name = ?
+	`, computerName).Scan(
+		&computer.ID,
+		&computer.Name,
+		&computer.CreatedAt,
+		&computer.UpdatedAt,
+		&computer.CreatedByID,
+	)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &computer, nil
+}
+
+// CheckUserComputerAccess checks if a user has access to a computer
+func CheckUserComputerAccess(db *sql.DB, userID int64, computerID int64) (bool, error) {
+	var count int
+	err := db.QueryRow(`
+		SELECT COUNT(*)
+		FROM remote_computers
+		WHERE id = ? AND created_by_id = ?
+	`, computerID, userID).Scan(&count)
+
+	if err != nil {
+		return false, err
+	}
+
+	return count > 0, nil
+}
+
+// GetComputerCredential retrieves the credential associated with a computer
+func GetComputerCredential(db *sql.DB, computerID int64) (*Credential, error) {
+	var cred Credential
+	err := db.QueryRow(`
+		SELECT 
+			c.id,
+			c.username,
+			c.password,
+			c.created_at,
+			c.updated_at,
+			c.created_by_id
+		FROM credentials c
+		INNER JOIN computer_credential_mappings m ON m.credential_id = c.id
+		WHERE m.computer_id = ?
+		ORDER BY m.updated_at DESC
+		LIMIT 1
+	`, computerID).Scan(
+		&cred.ID,
+		&cred.Username,
+		&cred.Password,
+		&cred.CreatedAt,
+		&cred.UpdatedAt,
+		&cred.CreatedByID,
+	)
+
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	return &cred, nil
 }
