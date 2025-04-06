@@ -13,22 +13,25 @@ Windows Task Tracker is a web application designed for monitoring and managing W
 - 📝 Detailed task information display
 - 🎯 Task trigger and execution command details
 - 🔄 Auto-refresh and manual refresh options
+- ⚙️ Advanced task management (disable, enable, start, stop)
 
 ## Technology Stack
 
 ### Frontend
-- Vue.js 3 with Composition API
-- Vue Router for navigation
-- Tailwind CSS for styling
-- Vite as build tool
-- Axios for HTTP requests
+- Vue.js 3.5.13 with Composition API
+- Vue Router 4.5.0 for navigation
+- Tailwind CSS 3.4.1 for styling
+- Vite 6.2.0 as build tool
+- Axios 1.8.4 for HTTP requests
+- Vue-Toastification for notifications
 
 ### Backend
 - Go for the server implementation
-- SQLite for data storage
+- SQLite for persistent data storage
 - JWT for authentication
 - PowerShell Scripts for task management
 - Built-in CORS support
+- RESTful API architecture
 
 ## Installation Guide
 
@@ -90,7 +93,33 @@ npm run build
    - Filter tasks by status (Ready, Running, Disabled)
    - Filter tasks by computer name
    - View detailed task information including triggers and commands
+   - Control tasks with disable, enable, start, and stop actions
    - Click the refresh button to update data
+
+## API Endpoints
+
+### Authentication
+- `/api/register` - Register new user
+- `/api/login` - User login
+- `/api/verify` - Verify authentication token
+- `/api/logout` - User logout
+
+### Tasks Management
+- `/api/tasks` - Get all tasks
+- `/api/tasks/disable` - Disable a task
+- `/api/tasks/enable` - Enable a task
+- `/api/tasks/start` - Start a task
+- `/api/tasks/stop` - Stop a task
+
+### Remote Computer Management
+- `/api/computers/list` - List all user computers
+- `/api/computers` - Create a new remote computer
+- `/api/computers/delete` - Delete a remote computer
+- `/api/credentials/list` - List user credentials
+- `/api/credentials` - Create a new credential
+- `/api/credentials/update` - Update a credential
+- `/api/credentials/delete` - Delete a credential
+- `/api/computers/map-credential` - Map credential to computer
 
 ## Important Notes
 
