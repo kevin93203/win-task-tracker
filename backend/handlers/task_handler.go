@@ -106,6 +106,17 @@ type DisableTaskResponse struct {
 	Error   string `json:"error,omitempty"`
 }
 
+type EnableTaskRequest struct {
+	ComputerID int64  `json:"computer_id"`
+	TaskName   string `json:"task_name"`
+}
+
+type EnableTaskResponse struct {
+	Success bool   `json:"success"`
+	Message string `json:"message,omitempty"`
+	Error   string `json:"error,omitempty"`
+}
+
 func executeCommand(command string, host RemoteHost, wg *sync.WaitGroup, results chan<- ScheduledTasks, errChan chan<- TaskError) {
 	defer wg.Done()
 
@@ -248,6 +259,95 @@ func DisableTaskHandler(w http.ResponseWriter, r *http.Request) {
 	} else {
 		response.Success = true
 		response.Message = fmt.Sprintf("Successfully disabled task '%s' on computer '%s'", req.TaskName, computer.Name)
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
+}
+
+// EnableTaskHandler handles the request to enable a scheduled task on a remote computer
+func EnableTaskHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Get user ID from context (set by auth middleware)
+	userID := r.Context().Value("user_id").(int64)
+
+	// Parse request body
+	var req EnableTaskRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	// Get database connection
+	db := models.GetDB()
+
+	// 從資料庫中獲取電腦資訊
+	computer, err := models.GetComputerByID(db, req.ComputerID)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Failed to get computer info: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	// 檢查用戶是否有權限訪問該電腦
+	hasAccess, err := models.CheckUserComputerAccess(db, userID, req.ComputerID)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Failed to check computer access: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	if !hasAccess {
+		http.Error(w, "Unauthorized access to computer", http.StatusForbidden)
+		return
+	}
+
+	// 獲取電腦的認證資訊
+	credential, err := models.GetComputerCredential(db, req.ComputerID)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Failed to get computer credentials: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	// 檢查是否有認證資訊
+	if credential == nil || credential.Password == nil {
+		http.Error(w, "No valid credentials found for this computer", http.StatusBadRequest)
+		return
+	}
+
+	// 準備遠端主機資訊
+	targetHost := RemoteHost{
+		UserName:     credential.Username,
+		Password:     *credential.Password,
+		ComputerName: computer.Name,
+	}
+
+	// 使用 PowerShell 腳本啟用任務
+	cmd := fmt.Sprintf(
+		"powershell -File ./scripts/enableTask.ps1 "+
+			"-TaskName '%s' "+
+			"-UserName '%s' "+
+			"-Password '%s' "+
+			"-ComputerName '%s'",
+		req.TaskName,
+		targetHost.UserName,
+		targetHost.Password,
+		targetHost.ComputerName,
+	)
+
+	// Execute the command
+	powershell := exec.Command("powershell", "-Command", cmd)
+	output, err := powershell.CombinedOutput()
+
+	response := EnableTaskResponse{}
+	if err != nil {
+		response.Success = false
+		response.Error = fmt.Sprintf("Failed to enable task: %s - %s", err.Error(), string(output))
+	} else {
+		response.Success = true
+		response.Message = fmt.Sprintf("Successfully enabled task '%s' on computer '%s'", req.TaskName, computer.Name)
 	}
 
 	w.Header().Set("Content-Type", "application/json")
