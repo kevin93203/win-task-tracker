@@ -23,6 +23,7 @@
             :key="job.ExtraInfo.ComputerName + job.RegistrationInfo.URI"
             :job="job"
             @task-disabled="handleTaskDisabled"
+            @task-enabled="handleTaskEnabled"
           />
         </div>
         
@@ -80,6 +81,22 @@ export default {
             ExtraInfo: {
               ...job.ExtraInfo,
               State: 'Disabled'
+            }
+          }
+        }
+        return job
+      })
+    }
+
+    const handleTaskEnabled = ({ computerID, taskName }) => {
+      // 更新本地狀態
+      jobs.value = jobs.value.map(job => {
+        if (job.ExtraInfo.ComputerID === computerID && job.ExtraInfo.TaskName === taskName) {
+          return {
+            ...job,
+            ExtraInfo: {
+              ...job.ExtraInfo,
+              State: 'Ready'
             }
           }
         }
@@ -161,7 +178,8 @@ export default {
       uniqueComputers,
       isSidebarOpen,
       refreshJobs,
-      handleTaskDisabled
+      handleTaskDisabled,
+      handleTaskEnabled
     };
   }
 };

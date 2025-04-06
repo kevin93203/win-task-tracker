@@ -11,6 +11,17 @@
         
         <div class="flex items-center gap-3">
           <button 
+            v-if="job.ExtraInfo.State === 'Disabled'"
+            @click="enableTask" 
+            class="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-green-700 hover:text-white bg-green-50 hover:bg-green-600 rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed group"
+            :disabled="isEnabling"
+          >
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+            </svg>
+            <span>{{ isEnabling ? '啟用中...' : '啟用' }}</span>
+          </button>
+          <button 
             v-if="job.ExtraInfo.State !== 'Disabled'"
             @click="disableTask" 
             class="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-red-700 hover:text-white bg-red-50 hover:bg-red-600 rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed group"
@@ -142,7 +153,7 @@ import axios from 'axios'
 
 export default {
   name: 'JobCard',
-  emits: ['task-disabled'],
+  emits: ['task-disabled', 'task-enabled'],
   props: {
     job: {
       type: Object,
@@ -193,6 +204,7 @@ export default {
   setup(props, { emit }) {
     const toast = useToast()
     const isDisabling = ref(false)
+    const isEnabling = ref(false)
 
     const disableTask = async () => {
       if (isDisabling.value) return
@@ -246,9 +258,63 @@ export default {
       }
     }
 
+    const enableTask = async () => {
+      if (isEnabling.value) return
+
+      try {
+        isEnabling.value = true
+
+        // 取得 JWT token
+        const cookies = document.cookie.split(';')
+        const jwtCookie = cookies.find(cookie => cookie.trim().startsWith('jwt='))
+        const jwt = jwtCookie ? jwtCookie.split('=')[1].trim() : null
+
+        const response = await axios.post(
+          'http://localhost:8080/api/tasks/enable',
+          {
+            computer_id: props.job.ExtraInfo.ComputerID,
+            task_name: props.job.ExtraInfo.TaskName
+          },
+          {
+            withCredentials: true,
+            headers: {
+              'Authorization': `Bearer ${jwt}`
+            }
+          }
+        )
+
+        const result = response.data
+
+        if (result.success) {
+          toast.success('任務已啟用')
+          emit('task-enabled', {
+            computerID: props.job.ExtraInfo.ComputerID,
+            taskName: props.job.ExtraInfo.TaskName
+          })
+        } else {
+          throw new Error(result.error || '啟用任務失敗')
+        }
+      } catch (error) {
+        if (error.response) {
+          // 後端回傳的錯誤
+          toast.error(error.response.data.error || '啟用任務失敗')
+        } else if (error.request) {
+          // 網路連線問題
+          toast.error('網路連線失敗，請稍後再試')
+        } else {
+          // 其他錯誤
+          toast.error(error.message || '啟用任務失敗')
+        }
+      } finally {
+        isEnabling.value = false
+      }
+    }
+
     return {
       isDisabling,
-      disableTask
+      isEnabling,
+      disableTask,
+      enableTask
     }
   },
 
