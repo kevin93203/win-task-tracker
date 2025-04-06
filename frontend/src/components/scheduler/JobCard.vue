@@ -22,6 +22,30 @@
             <span>{{ isEnabling ? '啟用中...' : '啟用' }}</span>
           </button>
           <button 
+            v-if="job.ExtraInfo.State === 'Ready'"
+            @click="startTask" 
+            class="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-blue-700 hover:text-white bg-blue-50 hover:bg-blue-600 rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed group"
+            :disabled="isStarting"
+          >
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span>{{ isStarting ? '啟動中...' : '啟動' }}</span>
+          </button>
+          <button 
+            v-if="job.ExtraInfo.State === 'Running'"
+            @click="stopTask" 
+            class="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-orange-700 hover:text-white bg-orange-50 hover:bg-orange-600 rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed group"
+            :disabled="isStopping"
+          >
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 10a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z" />
+            </svg>
+            <span>{{ isStopping ? '停止中...' : '停止' }}</span>
+          </button>
+          <button 
             v-if="job.ExtraInfo.State !== 'Disabled'"
             @click="disableTask" 
             class="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-red-700 hover:text-white bg-red-50 hover:bg-red-600 rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed group"
@@ -153,7 +177,7 @@ import axios from 'axios'
 
 export default {
   name: 'JobCard',
-  emits: ['task-disabled', 'task-enabled'],
+  emits: ['task-disabled', 'task-enabled', 'task-started', 'task-stopped'],
   props: {
     job: {
       type: Object,
@@ -205,6 +229,8 @@ export default {
     const toast = useToast()
     const isDisabling = ref(false)
     const isEnabling = ref(false)
+    const isStarting = ref(false)
+    const isStopping = ref(false)
 
     const disableTask = async () => {
       if (isDisabling.value) return
@@ -310,11 +336,119 @@ export default {
       }
     }
 
+    const startTask = async () => {
+      if (isStarting.value) return
+
+      try {
+        isStarting.value = true
+
+        // 取得 JWT token
+        const cookies = document.cookie.split(';')
+        const jwtCookie = cookies.find(cookie => cookie.trim().startsWith('jwt='))
+        const jwt = jwtCookie ? jwtCookie.split('=')[1].trim() : null
+
+        const response = await axios.post(
+          'http://localhost:8080/api/tasks/start',
+          {
+            computer_id: props.job.ExtraInfo.ComputerID,
+            task_name: props.job.ExtraInfo.TaskName
+          },
+          {
+            withCredentials: true,
+            headers: {
+              'Authorization': `Bearer ${jwt}`
+            }
+          }
+        )
+
+        const result = response.data
+
+        if (result.success) {
+          toast.success('任務已啟動')
+          emit('task-started', {
+            computerID: props.job.ExtraInfo.ComputerID,
+            taskName: props.job.ExtraInfo.TaskName
+          })
+        } else {
+          throw new Error(result.error || '啟動任務失敗')
+        }
+      } catch (error) {
+        if (error.response) {
+          // 後端回傳的錯誤
+          toast.error(error.response.data.error || '啟動任務失敗')
+        } else if (error.request) {
+          // 網路連線問題
+          toast.error('網路連線失敗，請稍後再試')
+        } else {
+          // 其他錯誤
+          toast.error(error.message || '啟動任務失敗')
+        }
+      } finally {
+        isStarting.value = false
+      }
+    }
+
+    const stopTask = async () => {
+      if (isStopping.value) return
+
+      try {
+        isStopping.value = true
+
+        // 取得 JWT token
+        const cookies = document.cookie.split(';')
+        const jwtCookie = cookies.find(cookie => cookie.trim().startsWith('jwt='))
+        const jwt = jwtCookie ? jwtCookie.split('=')[1].trim() : null
+
+        const response = await axios.post(
+          'http://localhost:8080/api/tasks/stop',
+          {
+            computer_id: props.job.ExtraInfo.ComputerID,
+            task_name: props.job.ExtraInfo.TaskName
+          },
+          {
+            withCredentials: true,
+            headers: {
+              'Authorization': `Bearer ${jwt}`
+            }
+          }
+        )
+
+        const result = response.data
+
+        if (result.success) {
+          toast.success('任務已停止')
+          emit('task-stopped', {
+            computerID: props.job.ExtraInfo.ComputerID,
+            taskName: props.job.ExtraInfo.TaskName
+          })
+        } else {
+          throw new Error(result.error || '停止任務失敗')
+        }
+      } catch (error) {
+        if (error.response) {
+          // 後端回傳的錯誤
+          toast.error(error.response.data.error || '停止任務失敗')
+        } else if (error.request) {
+          // 網路連線問題
+          toast.error('網路連線失敗，請稍後再試')
+        } else {
+          // 其他錯誤
+          toast.error(error.message || '停止任務失敗')
+        }
+      } finally {
+        isStopping.value = false
+      }
+    }
+
     return {
       isDisabling,
       isEnabling,
+      isStarting,
+      isStopping,
       disableTask,
-      enableTask
+      enableTask,
+      startTask,
+      stopTask
     }
   },
 

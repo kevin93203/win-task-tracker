@@ -24,6 +24,8 @@
             :job="job"
             @task-disabled="handleTaskDisabled"
             @task-enabled="handleTaskEnabled"
+            @task-started="handleTaskStarted"
+            @task-stopped="handleTaskStopped"
           />
         </div>
         
@@ -89,6 +91,38 @@ export default {
     }
 
     const handleTaskEnabled = ({ computerID, taskName }) => {
+      // 更新本地狀態
+      jobs.value = jobs.value.map(job => {
+        if (job.ExtraInfo.ComputerID === computerID && job.ExtraInfo.TaskName === taskName) {
+          return {
+            ...job,
+            ExtraInfo: {
+              ...job.ExtraInfo,
+              State: 'Ready'
+            }
+          }
+        }
+        return job
+      })
+    }
+
+    const handleTaskStarted = ({ computerID, taskName }) => {
+      // 更新本地狀態
+      jobs.value = jobs.value.map(job => {
+        if (job.ExtraInfo.ComputerID === computerID && job.ExtraInfo.TaskName === taskName) {
+          return {
+            ...job,
+            ExtraInfo: {
+              ...job.ExtraInfo,
+              State: 'Running'
+            }
+          }
+        }
+        return job
+      })
+    }
+
+    const handleTaskStopped = ({ computerID, taskName }) => {
       // 更新本地狀態
       jobs.value = jobs.value.map(job => {
         if (job.ExtraInfo.ComputerID === computerID && job.ExtraInfo.TaskName === taskName) {
@@ -179,7 +213,9 @@ export default {
       isSidebarOpen,
       refreshJobs,
       handleTaskDisabled,
-      handleTaskEnabled
+      handleTaskEnabled,
+      handleTaskStarted,
+      handleTaskStopped
     };
   }
 };
