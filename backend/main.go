@@ -29,6 +29,8 @@ func main() {
 	http.HandleFunc("/api/tasks", middleware.CorsMiddleware(middleware.AuthMiddleware(handlers.GetTasksHandler)))
 	http.HandleFunc("/api/tasks/disable", middleware.CorsMiddleware(middleware.AuthMiddleware(handlers.DisableTaskHandler)))
 	http.HandleFunc("/api/tasks/enable", middleware.CorsMiddleware(middleware.AuthMiddleware(handlers.EnableTaskHandler)))
+	http.HandleFunc("/api/tasks/start", middleware.CorsMiddleware(middleware.AuthMiddleware(handlers.StartTaskHandler)))
+	http.HandleFunc("/api/tasks/stop", middleware.CorsMiddleware(middleware.AuthMiddleware(handlers.StopTaskHandler)))
 
 	// Remote computer management endpoints
 	// Get method endpoints
