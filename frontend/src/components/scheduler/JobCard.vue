@@ -1,101 +1,135 @@
 <template>
-  <div class="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-300">
-    <div class="p-4 border-b border-gray-100">
-      <div class="flex justify-between items-center mb-2">
-        <h2 class="font-bold text-lg text-gray-800 truncate" :title="job.ExtraInfo.TaskName">
-          {{ job.ExtraInfo.TaskName }}
-        </h2>
-        <div class="flex items-center gap-2">
+  <div class="bg-white rounded-xl shadow-sm hover:shadow-md transition-all duration-300 border border-gray-100">
+    <div class="p-5">
+      <div class="flex justify-between items-start gap-4 mb-3">
+        <div class="flex-1">
+          <h2 class="font-semibold text-lg text-gray-800 truncate group-hover:text-indigo-600 transition-colors" :title="job.ExtraInfo.TaskName">
+            {{ job.ExtraInfo.TaskName }}
+          </h2>
+          <p class="text-sm text-gray-500 mt-1">{{ job.ExtraInfo.ComputerName }}</p>
+        </div>
+        
+        <div class="flex items-center gap-3">
           <button 
             v-if="job.ExtraInfo.State !== 'Disabled'"
             @click="disableTask" 
-            class="text-xs px-2 py-1 text-red-600 hover:text-red-800 hover:bg-red-50 rounded transition-colors"
+            class="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-red-700 hover:text-white bg-red-50 hover:bg-red-600 rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed group"
             :disabled="isDisabling"
           >
-            {{ isDisabling ? '停用中...' : '停用任務' }}
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+            </svg>
+            <span>{{ isDisabling ? '停用中...' : '停用' }}</span>
           </button>
-          <span :class="getStatusClass(job.ExtraInfo.State)" class="px-2 py-1 rounded-full text-xs font-bold">
+          <span 
+            :class="[getStatusClass(job.ExtraInfo.State), 
+                   'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-sm font-medium']">
+            <span class="w-2 h-2 rounded-full" :class="{
+              'bg-green-400': job.ExtraInfo.State === 'Ready',
+              'bg-yellow-400': job.ExtraInfo.State === 'Running',
+              'bg-red-400': job.ExtraInfo.State === 'Disabled'
+            }"></span>
             {{ getStatusChinese(job.ExtraInfo.State) }}
           </span>
         </div>
       </div>
-      <p v-if="job.RegistrationInfo.Description" class="text-sm text-gray-600">
+      <div v-if="job.RegistrationInfo.Description" class="mt-2 text-sm text-gray-500 line-clamp-2">
         {{ job.RegistrationInfo.Description }}
-      </p>
-    </div>
-    
-    <div class="p-4 space-y-3">
-      <div class="flex items-start">
-        <span class="text-gray-500 w-24 flex-shrink-0">執行指令:</span>
-        <div class="flex-1">
-          <div v-if="commands.length > 0" class="space-y-2">
-            <div v-for="(command, index) in commands" :key="index"
-              class="group">
-              <div class="text-xs text-gray-500 mb-1">指令 #{{ index + 1 }}</div>
-              <code class="block w-full bg-gray-50 text-sm p-3 rounded-lg border border-gray-200 font-mono text-gray-800 break-all whitespace-pre-wrap group-hover:bg-gray-100 transition-colors">{{ command.Command || '無' }}</code>
-              <div v-if="command.Arguments" class="mt-2">
-                <span class="text-xs text-gray-500">參數:</span>
-                <code class="ml-2 px-2 py-1 bg-gray-50 text-xs rounded border border-gray-200 font-mono">{{ command.Arguments }}</code>
+      </div>
+
+      <div class="mt-6 space-y-4">
+        <div class="flex items-start gap-x-3">
+          <div class="flex-shrink-0">
+            <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+            </svg>
+          </div>
+          <div class="flex-1 space-y-1.5">
+            <p class="text-sm font-medium text-gray-900">執行指令</p>
+            <div v-if="commands.length > 0" class="space-y-3">
+              <div v-for="(command, index) in commands" :key="index"
+                class="group rounded-lg border border-gray-200 overflow-hidden bg-white hover:border-gray-300 transition-colors">
+                <div class="flex items-center justify-between px-4 py-2 bg-gray-50 border-b border-gray-200">
+                  <span class="text-xs font-medium text-gray-600">指令 #{{ index + 1 }}</span>
+                </div>
+                <div class="p-3">
+                  <code class="block text-sm font-mono text-gray-800 break-all whitespace-pre-wrap">{{ command.Command || '無' }}</code>
+                  <div v-if="command.Arguments" class="mt-2 flex items-center gap-2">
+                    <span class="text-xs font-medium text-gray-500">參數:</span>
+                    <code class="text-xs font-mono text-gray-600 bg-gray-50 px-2 py-1 rounded">{{ command.Arguments }}</code>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div v-else class="text-sm text-gray-500 italic">無執行指令</div>
+          </div>
+        </div>
+
+        <div class="flex items-start gap-x-3">
+          <div class="flex-shrink-0">
+            <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <div class="flex-1 space-y-1.5">
+            <p class="text-sm font-medium text-gray-900">觸發程序</p>
+            <div class="space-y-2">
+              <div v-if="triggers.timeTriggers.length" class="space-y-2">
+                <div v-for="(trigger, index) in triggers.timeTriggers" :key="index"
+                  class="flex items-center gap-2 px-3 py-2 rounded-lg border border-blue-200 bg-blue-50 text-blue-700">
+                  <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <span class="text-sm">{{ trigger }}</span>
+                </div>
+              </div>
+              <div v-if="triggers.calendarTriggers.length" class="space-y-2">
+                <div v-for="(trigger, index) in triggers.calendarTriggers" :key="index"
+                  class="flex items-center gap-2 px-3 py-2 rounded-lg border border-purple-200 bg-purple-50 text-purple-700">
+                  <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                  <span class="text-sm">{{ trigger }}</span>
+                </div>
+              </div>
+              <div v-if="!triggers.timeTriggers.length && !triggers.calendarTriggers.length"
+                class="text-sm text-gray-500 italic px-3 py-2">
+                無觸發程序
               </div>
             </div>
           </div>
-          <div v-else class="text-gray-500 italic">無執行指令</div>
         </div>
-      </div>
-      
-      <div class="flex items-start">
-        <span class="text-gray-500 w-24 flex-shrink-0">觸發程序:</span>
-        <div class="flex-1 space-y-2">
-          <div v-if="triggers.timeTriggers.length" class="space-y-1">
-            <div v-for="(trigger, index) in triggers.timeTriggers" :key="index"
-              class="flex items-center gap-2 bg-blue-50 px-3 py-2 rounded-md">
-              <svg class="h-4 w-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              <span class="text-sm text-blue-700">{{ trigger }}</span>
-            </div>
+
+        <div class="flex items-start gap-x-3">
+          <div class="flex-shrink-0">
+            <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+            </svg>
           </div>
-          <div v-if="triggers.calendarTriggers.length" class="space-y-1">
-            <div v-for="(trigger, index) in triggers.calendarTriggers" :key="index"
-              class="flex items-center gap-2 bg-purple-50 px-3 py-2 rounded-md">
-              <svg class="h-4 w-4 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-              </svg>
-              <span class="text-sm text-purple-700">{{ trigger }}</span>
-            </div>
-          </div>
-          <div v-if="!triggers.timeTriggers.length && !triggers.calendarTriggers.length"
-            class="text-gray-500 italic text-sm">
-            無觸發程序
+          <div class="flex-1">
+            <p class="text-sm font-medium text-gray-900">作者</p>
+            <p class="mt-1 text-sm text-gray-500">{{ job.RegistrationInfo.Author || '未知' }}</p>
           </div>
         </div>
-      </div>
-      
-      <div class="flex items-start">
-        <span class="text-gray-500 w-24 flex-shrink-0">電腦名稱:</span>
-        <span class="text-gray-800">{{ job.ExtraInfo.ComputerName }}</span>
-      </div>
-      
-      <div class="flex items-start">
-        <span class="text-gray-500 w-24 flex-shrink-0">作者:</span>
-        <span class="text-gray-800">{{ job.RegistrationInfo.Author }}</span>
       </div>
     </div>
     
-    <div class="bg-gray-50 p-4 space-y-2">
-      <div class="flex justify-between text-sm">
-        <span class="text-gray-600">下次執行:</span>
-        <span class="text-gray-800 font-medium">{{ formatDateTime(job.ExtraInfo.NextRunTime) }}</span>
-      </div>
-      
-      <div class="flex justify-between text-sm">
-        <span class="text-gray-600">上次執行:</span>
-        <span class="text-gray-800 font-medium">{{ formatDateTime(job.ExtraInfo.LastRunTime) }}</span>
-      </div>
-      
-      <div class="flex justify-between text-sm">
-        <span class="text-gray-600">執行結果:</span>
-        <span :class="getResultClass(job.ExtraInfo.LastTaskResult)">{{ job.ExtraInfo.LastTaskResult || '無' }}</span>
+    <div class="border-t border-gray-100 bg-gray-50 p-5">
+      <div class="grid grid-cols-3 gap-4">
+        <div class="space-y-1">
+          <p class="text-xs font-medium text-gray-500">下次執行</p>
+          <p class="text-sm font-medium text-gray-900">{{ formatDateTime(job.ExtraInfo.NextRunTime) || '無' }}</p>
+        </div>
+        
+        <div class="space-y-1">
+          <p class="text-xs font-medium text-gray-500">上次執行</p>
+          <p class="text-sm font-medium text-gray-900">{{ formatDateTime(job.ExtraInfo.LastRunTime) || '無' }}</p>
+        </div>
+        
+        <div class="space-y-1">
+          <p class="text-xs font-medium text-gray-500">執行結果</p>
+          <p :class="['text-sm font-medium', getResultClass(job.ExtraInfo.LastTaskResult)]">{{ job.ExtraInfo.LastTaskResult || '無' }}</p>
+        </div>
       </div>
     </div>
   </div>
@@ -251,20 +285,17 @@ export default {
     getStatusClass(status) {
       switch (status) {
         case 'Ready':
-          return 'bg-green-100 text-green-800';
+          return 'bg-green-50 text-green-700'
         case 'Running':
-          return 'bg-blue-100 text-blue-800';
+          return 'bg-yellow-50 text-yellow-700'
         case 'Disabled':
-          return 'bg-gray-100 text-gray-800';
+          return 'bg-red-50 text-red-700'
         default:
-          return 'bg-gray-100 text-gray-800';
+          return 'bg-gray-50 text-gray-700'
       }
     },
     getResultClass(result) {
-      if (!result || result === '0') {
-        return 'text-green-600 font-medium';
-      }
-      return 'text-red-600 font-medium';
+      return result === 0 ? 'text-green-700' : 'text-red-700'
     }
   }
 }
