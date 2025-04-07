@@ -1,7 +1,7 @@
 <template>
   <div class="flex">
     <Sidebar ref="sidebar" />
-    <div class="flex-1 p-8 transition-all duration-300" :class="{ 'ml-64': isSidebarOpen, 'ml-0': !isSidebarOpen }">
+    <div class="flex-1 p-8 transition-all duration-300" :class="{ 'ml-64': isSidebarOpen, 'ml-16': !isSidebarOpen }">
       <SchedulerHeader />
       
       <LoadingSpinner v-if="loading" />

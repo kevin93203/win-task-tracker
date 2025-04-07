@@ -364,10 +364,15 @@ export default {
     },
     contentClass() {
       // Determine content class based on sidebar state and screen size
-      return {
-        'md:ml-64': this.sidebarOpen && !this.isMobile,
-        'ml-0': !this.sidebarOpen || this.isMobile
-      };
+      if (this.isMobile) {
+        return { 'ml-0': true }; // Keep ml-0 on mobile regardless of sidebar state
+      } else {
+        // Apply ml-64 for open, ml-16 for collapsed on medium screens and up
+        return {
+          'md:ml-64': this.sidebarOpen,
+          'md:ml-16': !this.sidebarOpen
+        };
+      }
     }
   },
   mounted() {
