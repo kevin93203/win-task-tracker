@@ -2,14 +2,14 @@
   <div class="bg-white rounded-xl shadow-sm hover:shadow-md transition-all duration-300 border border-gray-100">
     <div class="p-5">
       <div class="flex justify-between items-start gap-4 mb-3">
-        <div class="flex-1">
+        <div class="flex-1 min-w-0">
           <h2 class="font-semibold text-lg text-gray-800 truncate group-hover:text-indigo-600 transition-colors" :title="job.ExtraInfo.TaskName">
             {{ job.ExtraInfo.TaskName }}
           </h2>
           <p class="text-sm text-gray-500 mt-1">{{ job.ExtraInfo.ComputerName }}</p>
         </div>
         
-        <div class="flex items-center gap-3">
+        <div class="flex items-center flex-wrap gap-3">
           <button 
             v-if="job.ExtraInfo.State === 'Disabled'"
             @click="enableTask" 
@@ -91,7 +91,7 @@
                   <code class="block text-sm font-mono text-gray-800 break-all whitespace-pre-wrap">{{ command.Command || '無' }}</code>
                   <div v-if="command.Arguments" class="mt-2 flex items-center gap-2">
                     <span class="text-xs font-medium text-gray-500">參數:</span>
-                    <code class="text-xs font-mono text-gray-600 bg-gray-50 px-2 py-1 rounded">{{ command.Arguments }}</code>
+                    <code class="text-xs font-mono text-gray-600 bg-gray-50 px-2 py-1 rounded break-all">{{ command.Arguments }}</code>
                   </div>
                 </div>
               </div>
@@ -115,7 +115,7 @@
                   <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
-                  <span class="text-sm">{{ trigger }}</span>
+                  <span class="text-sm break-words">{{ trigger }}</span>
                 </div>
               </div>
               <div v-if="triggers.calendarTriggers.length" class="space-y-2">
@@ -124,7 +124,7 @@
                   <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                   </svg>
-                  <span class="text-sm">{{ trigger }}</span>
+                  <span class="text-sm break-words">{{ trigger }}</span>
                 </div>
               </div>
               <div v-if="!triggers.timeTriggers.length && !triggers.calendarTriggers.length"
@@ -153,17 +153,17 @@
       <div class="grid grid-cols-3 gap-4">
         <div class="space-y-1">
           <p class="text-xs font-medium text-gray-500">下次執行</p>
-          <p class="text-sm font-medium text-gray-900">{{ formatDateTime(job.ExtraInfo.NextRunTime) || '無' }}</p>
+          <p class="text-sm font-medium text-gray-900 break-words">{{ formatDateTime(job.ExtraInfo.NextRunTime) || '無' }}</p>
         </div>
         
         <div class="space-y-1">
           <p class="text-xs font-medium text-gray-500">上次執行</p>
-          <p class="text-sm font-medium text-gray-900">{{ formatDateTime(job.ExtraInfo.LastRunTime) || '無' }}</p>
+          <p class="text-sm font-medium text-gray-900 break-words">{{ formatDateTime(job.ExtraInfo.LastRunTime) || '無' }}</p>
         </div>
         
         <div class="space-y-1">
           <p class="text-xs font-medium text-gray-500">執行結果</p>
-          <p :class="['text-sm font-medium', getResultClass(job.ExtraInfo.LastTaskResult)]">{{ job.ExtraInfo.LastTaskResult || '無' }}</p>
+          <p :class="['text-sm font-medium break-words', getResultClass(job.ExtraInfo.LastTaskResult)]">{{ job.ExtraInfo.LastTaskResult || '無' }}</p>
         </div>
       </div>
     </div>
