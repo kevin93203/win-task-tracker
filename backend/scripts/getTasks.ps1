@@ -38,12 +38,6 @@ try {
             $tempDoc = New-Object System.Xml.XmlDocument
             $tempDoc.LoadXml($taskXml)
 
-            # 檢查 Author，分割並取最後一段
-            $author = $tempDoc.Task.RegistrationInfo.Author
-            $authorName = if ($author) { $author.Split("\")[-1] } else { "" }
-            if ($authorName -ne $userName) {
-                return
-            }
 
             # 添加額外的節點
             $extraInfo = $tempDoc.CreateElement("ExtraInfo")
