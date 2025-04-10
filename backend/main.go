@@ -32,6 +32,34 @@ func main() {
 	http.HandleFunc("/api/tasks/start", middleware.CorsMiddleware(middleware.AuthMiddleware(handlers.StartTaskHandler)))
 	http.HandleFunc("/api/tasks/stop", middleware.CorsMiddleware(middleware.AuthMiddleware(handlers.StopTaskHandler)))
 
+	// Trigger management endpoints
+	http.HandleFunc("/api/tasks/triggers", middleware.CorsMiddleware(middleware.AuthMiddleware(func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodPost:
+			handlers.AddTriggerHandler(w, r)
+		case http.MethodPatch:
+			handlers.UpdateTriggerHandler(w, r)
+		case http.MethodDelete:
+			handlers.DeleteTriggerHandler(w, r)
+		default:
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		}
+	})))
+
+	// Action management endpoints
+	http.HandleFunc("/api/tasks/actions", middleware.CorsMiddleware(middleware.AuthMiddleware(func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodPost:
+			handlers.AddActionHandler(w, r)
+		case http.MethodPatch:
+			handlers.UpdateActionHandler(w, r)
+		case http.MethodDelete:
+			handlers.DeleteActionHandler(w, r)
+		default:
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		}
+	})))
+
 	// Remote computer management endpoints
 	// Get method endpoints
 	http.HandleFunc("/api/computers/list", middleware.CorsMiddleware(middleware.AuthMiddleware(remoteComputerHandler.HandleGetUserComputers)))
