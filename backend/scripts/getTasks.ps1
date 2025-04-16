@@ -22,9 +22,9 @@ try {
 
     # 在遠端執行獲取排程任務的指令
     $tasks = Invoke-Command -Session $session -ScriptBlock {
-        param($userName, $computerID)
+        param($userName, $computerID, $computerName)
         
-        $hostname = hostname
+        $hostname = $computerName
         $xmlDoc = New-Object System.Xml.XmlDocument
         $root = $xmlDoc.CreateElement("ScheduledTasks")
         $xmlDoc.AppendChild($root) | Out-Null
@@ -72,7 +72,7 @@ try {
         }
 
         return $xmlDoc.OuterXml
-    } -ArgumentList $UserName, $ComputerID
+    } -ArgumentList $UserName, $ComputerID, $ComputerName
 
     # 輸出結果
     Write-Output $tasks
