@@ -109,77 +109,10 @@ const isEdit = ref(false);
 const currentTrigger = ref({});
 const currentIndex = ref(-1);
 
-// // --- 來自 JobCard 的 computed 邏輯，稍作修改 ---
-// const formattedTriggers = computed(() => {
-//   if (!props.triggers || props.triggers.length === 0) {
-//     return [];
-//   }
-//   // 假設後端回傳的 triggers 陣列結構是 { cron_expression: '...' }
-//   // 如果結構不同，需要調整這裡
-//   return props.triggers.map(trigger => ({
-//     display: trigger.cron_expression, // 直接顯示 cron 字串
-//     original: trigger // 保留原始物件供編輯使用
-//   }));
-// });
-function formatDateTime(dateTime) {
-      if (!dateTime) return '無';
-      
-      try {
-        const date = new Date(dateTime);
-        return new Intl.DateTimeFormat('zh-TW', {
-          year: 'numeric',
-          month: '2-digit',
-          day: '2-digit',
-          hour: '2-digit',
-          minute: '2-digit',
-          hour12: false
-        }).format(date);
-      } catch (e) {
-        return dateTime;
-      }
-    }
-
-
 // --- 來自 JobCard 的 computed 邏輯，稍作修改 ---
 const formattedTriggers = computed(() => ({
-  calendarTriggers: (props.triggers.CalendarTriggers || []).map(trigger => {
-            let text = `${formatDateTime(trigger.StartBoundary)}`;
-            if (trigger.ScheduleByDay) {
-              text += ` (每 ${trigger.ScheduleByDay.DaysInterval} 天)`;
-            } else if (trigger.ScheduleByWeek) {
-              let weekdays = []
-              if (trigger.ScheduleByWeek.DaysOfWeek.Sunday) {
-                weekdays.push('日')
-              }
-              if (trigger.ScheduleByWeek.DaysOfWeek.Monday) {
-                weekdays.push('一')
-              }
-              if (trigger.ScheduleByWeek.DaysOfWeek.Tuesday) {
-                weekdays.push('二')
-              }
-              if (trigger.ScheduleByWeek.DaysOfWeek.Wednesday) {
-                weekdays.push('三')
-              }
-              if (trigger.ScheduleByWeek.DaysOfWeek.Thursday) {
-                weekdays.push('四')
-              }
-              if (trigger.ScheduleByWeek.DaysOfWeek.Friday) {
-                weekdays.push('五')
-              }
-              if (trigger.ScheduleByWeek.DaysOfWeek.Saturday) {
-                weekdays.push('六')
-              }
-              text += ` (每 ${trigger.ScheduleByWeek.WeeksInterval} 個星期的 星期${weekdays.join('、')})`;
-            }
-            return text;
-          }),
-  timeTriggers: (props.triggers.TimeTriggers || []).map(trigger => {
-            let text = `${formatDateTime(trigger.StartBoundary)}`;
-            if (trigger.Repetition && trigger.Repetition.Interval) {
-              text += ` (每 ${trigger.Repetition.Interval.replace('PT', '').replace('H', ' 小時').replace('M', ' 分鐘')})`;
-            }
-            return text;
-          })
+  calendarTriggers: (props.triggers.CalendarTriggers || []).map(trigger => convertToChineseSummary(trigger)),
+  timeTriggers: (props.triggers.TimeTriggers || []).map(trigger => convertToChineseSummary(trigger))
 }));
 
 // --- 來自 TaskTriggers 的 CRUD 邏輯 ---
@@ -240,7 +173,77 @@ async function deleteTrigger(index) {
   }
 }
 
-// --- 來自 JobCard 的 formatDateTime (如果需要顯示時間) ---
-// function formatDateTime(dateTime) { ... }
-// 目前直接顯示 cron 字串，暫不需要
+function convertToChineseSummary(scheduleObj) {
+  let summary = "";
+  
+  // 處理開始時間
+  const startTime = new Date(scheduleObj.StartBoundary);
+  const formattedStartTime = `${startTime.getFullYear()}/${startTime.getMonth() + 1}/${startTime.getDate()} ${startTime.getHours()}:${String(startTime.getMinutes()).padStart(2, '0')}`;
+  
+  // 處理重複設定
+  let intervalDesc = "";
+  if (scheduleObj.Repetition && scheduleObj.Repetition.Interval) {
+    const interval = scheduleObj.Repetition.Interval;
+    if (interval.includes("PT")) {
+      const timeValue = interval.replace("PT", "");
+      if (timeValue.includes("H")) {
+        intervalDesc = `每${timeValue.replace("H", "")}小時`;
+      } else if (timeValue.includes("M")) {
+        intervalDesc = `每${timeValue.replace("M", "")}分鐘`;
+      }
+    }
+  }
+  
+  // 處理按日排程
+  if (scheduleObj.ScheduleByDay) {
+    const daysInterval = scheduleObj.ScheduleByDay.DaysInterval
+    summary = `從${formattedStartTime}開始，${intervalDesc}執行一次，每${daysInterval}天重複`;
+  }
+  // 處理按週排程
+  else if (scheduleObj.ScheduleByWeek) {
+    const daysOfWeek = scheduleObj.ScheduleByWeek.DaysOfWeek;
+    const selectedDays = [];
+    const weeksInterval = scheduleObj.ScheduleByWeek.WeeksInterval
+    
+    if (daysOfWeek.Sunday) selectedDays.push("日");
+    if (daysOfWeek.Monday) selectedDays.push("一");
+    if (daysOfWeek.Tuesday) selectedDays.push("二");
+    if (daysOfWeek.Wednesday) selectedDays.push("三");
+    if (daysOfWeek.Thursday) selectedDays.push("四");
+    if (daysOfWeek.Friday) selectedDays.push("五");
+    if (daysOfWeek.Saturday) selectedDays.push("六");
+    
+    summary = `從${formattedStartTime}開始，${intervalDesc}執行一次，每${weeksInterval}週${selectedDays.join("、")}重複`;
+  }
+  // 處理按月排程
+  else if (scheduleObj.ScheduleByMonth) {
+    const months = scheduleObj.ScheduleByMonth.Months;
+    const selectedMonths = [];
+    
+    if (months.January) selectedMonths.push("1");
+    if (months.February) selectedMonths.push("2");
+    if (months.March) selectedMonths.push("3");
+    if (months.April) selectedMonths.push("4");
+    if (months.May) selectedMonths.push("5");
+    if (months.June) selectedMonths.push("6");
+    if (months.July) selectedMonths.push("7");
+    if (months.August) selectedMonths.push("8");
+    if (months.September) selectedMonths.push("9");
+    if (months.October) selectedMonths.push("10");
+    if (months.November) selectedMonths.push("11");
+    if (months.December) selectedMonths.push("12");
+    
+    const daysOfMonth = scheduleObj.ScheduleByMonth.DaysOfMonth.Days.join("、");
+    
+    summary = `從${formattedStartTime}開始，${intervalDesc}執行一次，每年${selectedMonths.join("、")}月的${daysOfMonth}號重複`;
+  }
+  // 如果沒有特定排程，只有重複設定
+  else {
+    const duration = scheduleObj.Repetition && scheduleObj.Repetition.Duration ? "，持續一天" : "";
+    summary = `從${formattedStartTime}開始，${intervalDesc}執行一次${duration}`;
+  }
+  
+  return summary;
+}
+
 </script>

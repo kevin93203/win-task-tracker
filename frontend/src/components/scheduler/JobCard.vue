@@ -107,12 +107,12 @@
       <div class="grid grid-cols-3 gap-4">
         <div class="space-y-1">
           <p class="text-xs font-medium text-gray-500">下次執行</p>
-          <p class="text-sm font-medium text-gray-900 break-words">{{ formatDateTime(job.ExtraInfo.NextRunTime) || '無' }}</p>
+          <p class="text-sm font-medium text-gray-900 break-words">{{ job.ExtraInfo.NextRunTime || '無' }}</p>
         </div>
         
         <div class="space-y-1">
           <p class="text-xs font-medium text-gray-500">上次執行</p>
-          <p class="text-sm font-medium text-gray-900 break-words">{{ formatDateTime(job.ExtraInfo.LastRunTime) || '無' }}</p>
+          <p class="text-sm font-medium text-gray-900 break-words">{{ job.ExtraInfo.LastRunTime || '無' }}</p>
         </div>
         
         <div class="space-y-1">
@@ -363,25 +363,6 @@ async function disableTask() {
     }
   } finally {
     isDisabling.value = false;
-  }
-}
-
-// 格式化日期時間
-function formatDateTime(dateTime) {
-  if (!dateTime) return '無';
-  
-  try {
-    const date = new Date(dateTime);
-    return new Intl.DateTimeFormat('zh-TW', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: false
-    }).format(date);
-  } catch (e) {
-    return dateTime;
   }
 }
 
