@@ -46,11 +46,11 @@ type Repetition struct {
 }
 
 type ScheduleByDay struct {
-	DaysInterval string `xml:"DaysInterval,omitempty"`
+	DaysInterval int `xml:"DaysInterval,omitempty"`
 }
 
 type ScheduleByWeek struct {
-	WeeksInterval string     `xml:"WeeksInterval,omitempty"`
+	WeeksInterval int        `xml:"WeeksInterval,omitempty"`
 	DaysOfWeek    DaysOfWeek `xml:"DaysOfWeek,omitempty"`
 }
 
