@@ -75,13 +75,19 @@
           :computer-id="job.ExtraInfo.ComputerID"
           :task-name="job.ExtraInfo.TaskName"
           :actions="job.Actions || []"
-          @refresh="$emit('refresh')"
+          @refresh="$emit('refresh', {
+            computerID: job.ExtraInfo.ComputerID,
+            taskName: job.ExtraInfo.TaskName
+          })"
         />
         <TaskTriggerDisplay
           :computer-id="job.ExtraInfo.ComputerID"
           :task-name="job.ExtraInfo.TaskName"
           :triggers="job.Triggers || []"
-          @refresh="$emit('refresh')"
+          @refresh="$emit('refresh', {
+            computerID: job.ExtraInfo.ComputerID,
+            taskName: job.ExtraInfo.TaskName
+          })"
         />
         <div class="flex items-start gap-x-3">
           <div class="flex-shrink-0">

@@ -25,6 +25,7 @@
               @task-enabled="handleTaskEnabled"
               @task-started="handleTaskStarted"
               @task-stopped="handleTaskStopped"
+              @refresh="handleJobRefresh"
             />
           </div>
         </div>
@@ -138,6 +139,33 @@ export default {
       })
     }
 
+    const handleJobRefresh = async ({ computerID, taskName }) => {
+      try {
+        const cookies = document.cookie.split(';');
+        const jwtCookie = cookies.find(cookie => cookie.trim().startsWith('jwt='));
+        const jwt = jwtCookie ? jwtCookie.split('=')[1].trim() : null;
+
+        const response = await axios.get(`http://localhost:8080/api/tasks/${computerID}/${encodeURIComponent(taskName)}`, {
+          withCredentials: true,
+          headers: {
+            'Authorization': `Bearer ${jwt}`
+          }
+        });
+        
+        // 更新單個 job
+        if (response.data && response.data.task) {
+          jobs.value = jobs.value.map(job => {
+            if (job.ExtraInfo.ComputerID === computerID && job.ExtraInfo.TaskName === taskName) {
+              return response.data.task;
+            }
+            return job;
+          });
+        }
+      } catch (err) {
+        console.error('更新單個任務失敗:', err);
+      }
+    };
+
     const fetchJobs = async () => {
       loading.value = true;
       error.value = null;
@@ -215,7 +243,8 @@ export default {
       handleTaskDisabled,
       handleTaskEnabled,
       handleTaskStarted,
-      handleTaskStopped
+      handleTaskStopped,
+      handleJobRefresh
     };
   }
 };
