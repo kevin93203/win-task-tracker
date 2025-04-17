@@ -73,69 +73,22 @@
       </div>
 
       <div class="mt-6 space-y-4">
-        <div class="flex items-start gap-x-3">
-          <div class="flex-shrink-0">
-            <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-            </svg>
-          </div>
-          <div class="flex-1 space-y-1.5">
-            <p class="text-sm font-medium text-gray-900">執行指令</p>
-            <div v-if="commands.length > 0" class="space-y-3">
-              <div v-for="(command, index) in commands" :key="index"
-                class="group rounded-lg border border-gray-200 overflow-hidden bg-white hover:border-gray-300 transition-colors">
-                <div class="flex items-center justify-between px-4 py-2 bg-gray-50 border-b border-gray-200">
-                  <span class="text-xs font-medium text-gray-600">指令 #{{ index + 1 }}</span>
-                </div>
-                <div class="p-3">
-                  <code class="block text-sm font-mono text-gray-800 break-all whitespace-pre-wrap">{{ command.Command || '無' }}</code>
-                  <div v-if="command.Arguments" class="mt-2 flex items-center gap-2">
-                    <span class="text-xs font-medium text-gray-500">參數:</span>
-                    <code class="text-xs font-mono text-gray-600 bg-gray-50 px-2 py-1 rounded break-all">{{ command.Arguments }}</code>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div v-else class="text-sm text-gray-500 italic">無執行指令</div>
-          </div>
-        </div>
-
-        <div class="flex items-start gap-x-3">
-          <div class="flex-shrink-0">
-            <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-          </div>
-          <div class="flex-1 space-y-1.5">
-            <p class="text-sm font-medium text-gray-900">觸發程序</p>
-            <div class="space-y-2">
-              <div v-if="triggers.timeTriggers.length" class="space-y-2">
-                <div v-for="(trigger, index) in triggers.timeTriggers" :key="index"
-                  class="flex items-center gap-2 px-3 py-2 rounded-lg border border-blue-200 bg-blue-50 text-blue-700">
-                  <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  <span class="text-sm break-words">{{ trigger }}</span>
-                </div>
-              </div>
-              <div v-if="triggers.calendarTriggers.length" class="space-y-2">
-                <div v-for="(trigger, index) in triggers.calendarTriggers" :key="index"
-                  class="flex items-center gap-2 px-3 py-2 rounded-lg border border-purple-200 bg-purple-50 text-purple-700">
-                  <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                  </svg>
-                  <span class="text-sm break-words">{{ trigger }}</span>
-                </div>
-              </div>
-              <div v-if="!triggers.timeTriggers.length && !triggers.calendarTriggers.length"
-                class="text-sm text-gray-500 italic px-3 py-2">
-                無觸發程序
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="flex items-start gap-x-3">
+        <!-- 新的 Action Display 元件 -->
+        <TaskActionDisplay
+          :computer-id="job.ExtraInfo.ComputerID"
+          :task-name="job.ExtraInfo.TaskName"
+          :actions="job.Actions || []"
+          @refresh="$emit('refresh')"
+        />
+        <!-- 新的 Trigger Display 元件 -->
+        <TaskTriggerDisplay
+          :computer-id="job.ExtraInfo.ComputerID"
+          :task-name="job.ExtraInfo.TaskName"
+          :triggers="job.Triggers || []"
+          @refresh="$emit('refresh')"
+        />
+        <!-- 作者區塊 -->
+         <div class="flex items-start gap-x-3">
           <div class="flex-shrink-0">
             <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
@@ -182,47 +135,6 @@ export default {
     job: {
       type: Object,
       required: true
-    }
-  },
-  computed: {
-    commands() {
-      if (this.job.Actions.Execs) {
-        return this.job.Actions.Execs;
-      } else if (this.job.Actions.Exec) {
-        return [this.job.Actions.Exec];
-      }
-      return [];
-    },
-    triggers() {
-      const triggers = this.job.Triggers;
-      const result = {
-        timeTriggers: [],
-        calendarTriggers: []
-      };
-
-      if (triggers && triggers.length > 0) {
-        if (triggers[0].TimeTriggers) {
-          result.timeTriggers = triggers[0].TimeTriggers.map(trigger => {
-            let text = `${this.formatDateTime(trigger.StartBoundary)}`;
-            if (trigger.Repetition.Interval) {
-              text += ` (每 ${trigger.Repetition.Interval.replace('PT', '').replace('H', ' 小時').replace('M', ' 分鐘')})`;
-            }
-            return text;
-          });
-        }
-
-        if (triggers[0].CalendarTriggers) {
-          result.calendarTriggers = triggers[0].CalendarTriggers.map(trigger => {
-            let text = `${this.formatDateTime(trigger.StartBoundary)}`;
-            if (trigger.ScheduleByDay.DaysInterval) {
-              text += ` (每 ${trigger.ScheduleByDay.DaysInterval} 天)`;
-            }
-            return text;
-          });
-        }
-      }
-
-      return result;
     }
   },
   setup(props, { emit }) {
@@ -499,4 +411,13 @@ export default {
     }
   }
 }
-</script> 
+</script>
+
+<script setup>
+// 移除 TaskTriggers 和 TaskActions 的導入
+// import TaskTriggers from './TaskTriggers.vue';
+// import TaskActions from './TaskActions.vue';
+// 導入新的 Display 元件
+import TaskTriggerDisplay from './TaskTriggerDisplay.vue';
+import TaskActionDisplay from './TaskActionDisplay.vue';
+</script>
