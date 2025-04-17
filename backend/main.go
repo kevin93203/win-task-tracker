@@ -27,6 +27,7 @@ func main() {
 
 	// Tasks endpoints
 	http.HandleFunc("/api/tasks", middleware.CorsMiddleware(middleware.AuthMiddleware(handlers.GetTasksHandler)))
+	http.HandleFunc("/api/tasks/", middleware.CorsMiddleware(middleware.AuthMiddleware(handlers.GetTaskHandler)))
 	http.HandleFunc("/api/tasks/disable", middleware.CorsMiddleware(middleware.AuthMiddleware(handlers.DisableTaskHandler)))
 	http.HandleFunc("/api/tasks/enable", middleware.CorsMiddleware(middleware.AuthMiddleware(handlers.EnableTaskHandler)))
 	http.HandleFunc("/api/tasks/start", middleware.CorsMiddleware(middleware.AuthMiddleware(handlers.StartTaskHandler)))
