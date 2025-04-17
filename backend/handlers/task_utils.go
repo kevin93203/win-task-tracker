@@ -2,8 +2,10 @@ package handlers
 
 import (
 	"database/sql"
+	"encoding/json"
 	"encoding/xml"
 	"fmt"
+	"net/http"
 	"os/exec"
 	"sync"
 
@@ -109,4 +111,71 @@ func getTaskCredentials(db *sql.DB, userID int64, computerID int64) (*RemoteHost
 	}
 
 	return targetHost, nil
+}
+
+// parsePowerShellOutput 解析 PowerShell 腳本輸出並檢查操作是否成功
+func parsePowerShellOutput(output []byte, defaultSuccessMessage string) (bool, string) {
+	// 先嘗試將輸出解析為 JSON 對象
+	var result map[string]interface{}
+	if err := json.Unmarshal(output, &result); err != nil {
+		// 如果解析失敗，嘗試解析為 JSON 數組
+		var resultArray []interface{}
+		if err := json.Unmarshal(output, &resultArray); err != nil {
+			// 如果兩種方式都解析失敗，返回錯誤
+			return false, fmt.Sprintf("Failed to parse script output: %s\nOutput: %s", err.Error(), string(output))
+		}
+
+		// 如果成功解析為數組但數組為空，返回默認成功消息
+		if len(resultArray) == 0 {
+			return true, defaultSuccessMessage
+		}
+
+		// 如果數組不為空，檢查第一個元素是否為對象
+		if obj, ok := resultArray[0].(map[string]interface{}); ok {
+			// 檢查成功狀態
+			if success, ok := obj["Success"].(bool); ok && !success {
+				if errMsg, ok := obj["Error"].(string); ok {
+					return false, fmt.Sprintf("PowerShell error: %s", errMsg)
+				}
+				return false, "Unknown PowerShell error"
+			}
+
+			// 檢查消息
+			if message, ok := obj["Message"].(string); ok && message != "" {
+				return true, message
+			}
+		}
+
+		// 默認認為是成功的
+		return true, defaultSuccessMessage
+	}
+
+	// 檢查 PowerShell 腳本是否回報錯誤
+	if success, ok := result["Success"].(bool); ok && !success {
+		if errMsg, ok := result["Error"].(string); ok {
+			return false, fmt.Sprintf("PowerShell error: %s", errMsg)
+		}
+		return false, "Unknown PowerShell error"
+	}
+
+	// 如果有自定義成功消息，使用它
+	if message, ok := result["Message"].(string); ok && message != "" {
+		return true, message
+	}
+
+	// 否則使用默認成功消息
+	return true, defaultSuccessMessage
+}
+
+// sendAPIResponse 根據操作結果發送適當的 HTTP 響應
+func sendAPIResponse(w http.ResponseWriter, success bool, data interface{}) {
+	w.Header().Set("Content-Type", "application/json")
+
+	// 如果操作失敗，設置 HTTP 狀態碼為 400 Bad Request
+	if !success {
+		w.WriteHeader(http.StatusBadRequest)
+	}
+
+	// 編碼並發送 JSON 響應
+	json.NewEncoder(w).Encode(data)
 }

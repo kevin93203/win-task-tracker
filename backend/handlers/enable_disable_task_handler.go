@@ -58,12 +58,16 @@ func DisableTaskHandler(w http.ResponseWriter, r *http.Request) {
 		response.Success = false
 		response.Error = fmt.Sprintf("Failed to disable task: %s - %s", err.Error(), string(output))
 	} else {
-		response.Success = true
-		response.Message = fmt.Sprintf("Successfully disabled task '%s' on computer '%s'", req.TaskName, targetHost.ComputerName)
+		success, message := parsePowerShellOutput(output, fmt.Sprintf("Successfully disabled task '%s' on computer '%s'", req.TaskName, targetHost.ComputerName))
+		response.Success = success
+		if success {
+			response.Message = message
+		} else {
+			response.Error = message
+		}
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
+	sendAPIResponse(w, response.Success, response)
 }
 
 // EnableTaskHandler 處理啟用排程任務的請求
@@ -115,10 +119,14 @@ func EnableTaskHandler(w http.ResponseWriter, r *http.Request) {
 		response.Success = false
 		response.Error = fmt.Sprintf("Failed to enable task: %s - %s", err.Error(), string(output))
 	} else {
-		response.Success = true
-		response.Message = fmt.Sprintf("Successfully enabled task '%s' on computer '%s'", req.TaskName, targetHost.ComputerName)
+		success, message := parsePowerShellOutput(output, fmt.Sprintf("Successfully enabled task '%s' on computer '%s'", req.TaskName, targetHost.ComputerName))
+		response.Success = success
+		if success {
+			response.Message = message
+		} else {
+			response.Error = message
+		}
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
+	sendAPIResponse(w, response.Success, response)
 }

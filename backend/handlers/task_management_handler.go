@@ -113,10 +113,10 @@ func AddTriggerHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		resp = GenericResponse{Success: false, Message: fmt.Sprintf("Error: %v, Output: %s", err, string(output))}
 	} else {
-		resp = GenericResponse{Success: true, Message: "Trigger added successfully"}
+		success, message := parsePowerShellOutput(output, "Trigger added successfully")
+		resp = GenericResponse{Success: success, Message: message}
 	}
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(resp)
+	sendAPIResponse(w, resp.Success, resp)
 }
 
 // UpdateTriggerHandler updates an existing trigger
@@ -191,10 +191,10 @@ func UpdateTriggerHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		resp = GenericResponse{Success: false, Message: fmt.Sprintf("Error: %v, Output: %s", err, string(output))}
 	} else {
-		resp = GenericResponse{Success: true, Message: "Trigger updated successfully"}
+		success, message := parsePowerShellOutput(output, "Trigger updated successfully")
+		resp = GenericResponse{Success: success, Message: message}
 	}
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(resp)
+	sendAPIResponse(w, resp.Success, resp)
 }
 
 // DeleteTriggerHandler deletes a trigger from a task
@@ -227,10 +227,10 @@ func DeleteTriggerHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		resp = GenericResponse{Success: false, Message: fmt.Sprintf("Error: %v, Output: %s", err, string(output))}
 	} else {
-		resp = GenericResponse{Success: true, Message: "Trigger deleted successfully"}
+		success, message := parsePowerShellOutput(output, "Trigger deleted successfully")
+		resp = GenericResponse{Success: success, Message: message}
 	}
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(resp)
+	sendAPIResponse(w, resp.Success, resp)
 }
 
 // AddActionHandler adds a new action to a task
@@ -265,10 +265,10 @@ func AddActionHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		resp = GenericResponse{Success: false, Message: fmt.Sprintf("Error: %v, Output: %s", err, string(output))}
 	} else {
-		resp = GenericResponse{Success: true, Message: "Action added successfully"}
+		success, message := parsePowerShellOutput(output, "Action added successfully")
+		resp = GenericResponse{Success: success, Message: message}
 	}
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(resp)
+	sendAPIResponse(w, resp.Success, resp)
 }
 
 // UpdateActionHandler updates an existing action
@@ -305,10 +305,10 @@ func UpdateActionHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		resp = GenericResponse{Success: false, Message: fmt.Sprintf("Error: %v, Output: %s", err, string(output))}
 	} else {
-		resp = GenericResponse{Success: true, Message: "Action updated successfully"}
+		success, message := parsePowerShellOutput(output, "Action updated successfully")
+		resp = GenericResponse{Success: success, Message: message}
 	}
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(resp)
+	sendAPIResponse(w, resp.Success, resp)
 }
 
 // DeleteActionHandler deletes an action from a task
@@ -341,8 +341,8 @@ func DeleteActionHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		resp = GenericResponse{Success: false, Message: fmt.Sprintf("Error: %v, Output: %s", err, string(output))}
 	} else {
-		resp = GenericResponse{Success: true, Message: "Action deleted successfully"}
+		success, message := parsePowerShellOutput(output, "Action deleted successfully")
+		resp = GenericResponse{Success: success, Message: message}
 	}
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(resp)
+	sendAPIResponse(w, resp.Success, resp)
 }

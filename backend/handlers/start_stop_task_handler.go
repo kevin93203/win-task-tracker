@@ -58,34 +58,35 @@ func StartTaskHandler(w http.ResponseWriter, r *http.Request) {
 		response.Success = false
 		response.Error = fmt.Sprintf("Failed to start task: %s - %s", err.Error(), string(output))
 	} else {
-		// 解析 PowerShell 腳本返回的 JSON
-		var result map[string]interface{}
-		if err := json.Unmarshal(output, &result); err != nil {
-			response.Success = false
-			response.Error = fmt.Sprintf("Failed to parse script output: %s", err.Error())
-		} else {
-			// 檢查 PowerShell 腳本是否回報錯誤
-			if success, ok := result["Success"].(bool); ok && !success {
-				response.Success = false
-				if errMsg, ok := result["Error"].(string); ok {
-					response.Error = fmt.Sprintf("PowerShell error: %s", errMsg)
-				} else {
-					response.Error = "Unknown PowerShell error"
-				}
-			} else {
-				response.Success = true
-				response.Message = fmt.Sprintf("Successfully started task '%s' on computer '%s'", req.TaskName, targetHost.ComputerName)
+		success, message := parsePowerShellOutput(output, fmt.Sprintf("Successfully started task '%s' on computer '%s'", req.TaskName, targetHost.ComputerName))
+		response.Success = success
 
-				// 如果腳本返回了狀態，則添加到回應中
+		if success {
+			response.Message = message
+
+			// 解析狀態信息
+			var result map[string]interface{}
+			if json.Unmarshal(output, &result) == nil {
 				if state, ok := result["State"].(string); ok {
 					response.State = state
 				}
+			} else {
+				// 嘗試解析為數組
+				var resultArray []interface{}
+				if json.Unmarshal(output, &resultArray) == nil && len(resultArray) > 0 {
+					if obj, ok := resultArray[0].(map[string]interface{}); ok {
+						if state, ok := obj["State"].(string); ok {
+							response.State = state
+						}
+					}
+				}
 			}
+		} else {
+			response.Error = message
 		}
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
+	sendAPIResponse(w, response.Success, response)
 }
 
 // StopTaskHandler 處理停止排程任務的請求
@@ -137,32 +138,33 @@ func StopTaskHandler(w http.ResponseWriter, r *http.Request) {
 		response.Success = false
 		response.Error = fmt.Sprintf("Failed to stop task: %s - %s", err.Error(), string(output))
 	} else {
-		// 解析 PowerShell 腳本返回的 JSON
-		var result map[string]interface{}
-		if err := json.Unmarshal(output, &result); err != nil {
-			response.Success = false
-			response.Error = fmt.Sprintf("Failed to parse script output: %s", err.Error())
-		} else {
-			// 檢查 PowerShell 腳本是否回報錯誤
-			if success, ok := result["Success"].(bool); ok && !success {
-				response.Success = false
-				if errMsg, ok := result["Error"].(string); ok {
-					response.Error = fmt.Sprintf("PowerShell error: %s", errMsg)
-				} else {
-					response.Error = "Unknown PowerShell error"
-				}
-			} else {
-				response.Success = true
-				response.Message = fmt.Sprintf("Successfully stopped task '%s' on computer '%s'", req.TaskName, targetHost.ComputerName)
+		success, message := parsePowerShellOutput(output, fmt.Sprintf("Successfully stopped task '%s' on computer '%s'", req.TaskName, targetHost.ComputerName))
+		response.Success = success
 
-				// 如果腳本返回了狀態，則添加到回應中
+		if success {
+			response.Message = message
+
+			// 解析狀態信息
+			var result map[string]interface{}
+			if json.Unmarshal(output, &result) == nil {
 				if state, ok := result["State"].(string); ok {
 					response.State = state
 				}
+			} else {
+				// 嘗試解析為數組
+				var resultArray []interface{}
+				if json.Unmarshal(output, &resultArray) == nil && len(resultArray) > 0 {
+					if obj, ok := resultArray[0].(map[string]interface{}); ok {
+						if state, ok := obj["State"].(string); ok {
+							response.State = state
+						}
+					}
+				}
 			}
+		} else {
+			response.Error = message
 		}
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
+	sendAPIResponse(w, response.Success, response)
 }
