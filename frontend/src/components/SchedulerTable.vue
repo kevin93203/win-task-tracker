@@ -17,16 +17,16 @@
           @refresh="refreshJobs"
         />
  
-        <div v-if="filteredJobs.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <JobCard
-            v-for="job in filteredJobs"
-            :key="job.ExtraInfo.ComputerName + job.RegistrationInfo.URI"
-            :job="job"
-            @task-disabled="handleTaskDisabled"
-            @task-enabled="handleTaskEnabled"
-            @task-started="handleTaskStarted"
-            @task-stopped="handleTaskStopped"
-          />
+        <div v-if="filteredJobs.length > 0" class="flex flex-wrap -mx-3">
+          <div v-for="job in filteredJobs" :key="job.ExtraInfo.ComputerName + job.RegistrationInfo.URI" class="w-full md:w-1/2 lg:w-1/3 px-3 mb-6">
+            <JobCard
+              :job="job"
+              @task-disabled="handleTaskDisabled"
+              @task-enabled="handleTaskEnabled"
+              @task-started="handleTaskStarted"
+              @task-stopped="handleTaskStopped"
+            />
+          </div>
         </div>
         
         <NoResults v-else />
