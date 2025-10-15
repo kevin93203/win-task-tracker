@@ -153,6 +153,9 @@ const toast = useToast();
 // 啟用任務
 async function enableTask() {
   if (isEnabling.value) return;
+  if (!confirm(`確定要啟用任務 "${props.job.ExtraInfo.TaskName}" 嗎？`)) {
+    return;
+  }
   console.log('Enabling task:', props.job.ExtraInfo.TaskName);
 
   try {
@@ -207,6 +210,9 @@ async function enableTask() {
 // 啟動任務
 async function startTask() {
   if (isStarting.value) return;
+  if (!confirm(`確定要啟動任務 "${props.job.ExtraInfo.TaskName}" 嗎？`)) {
+    return;
+  }
   console.log('Starting task:', props.job.ExtraInfo.TaskName);
 
   try {
@@ -261,6 +267,9 @@ async function startTask() {
 // 停止任務
 async function stopTask() {
   if (isStopping.value) return;
+  if (!confirm(`確定要停止任務 "${props.job.ExtraInfo.TaskName}" 嗎？`)) {
+    return;
+  }
   console.log('Stopping task:', props.job.ExtraInfo.TaskName);
 
   try {
@@ -315,6 +324,9 @@ async function stopTask() {
 // 停用任務
 async function disableTask() {
   if (isDisabling.value) return;
+  if (!confirm(`確定要停用任務 "${props.job.ExtraInfo.TaskName}" 嗎？`)) {
+    return;
+  }
   console.log('Disabling task:', props.job.ExtraInfo.TaskName);
 
   try {
