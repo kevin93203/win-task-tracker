@@ -68,7 +68,7 @@ export default {
     const loading = ref(true);
     const error = ref(null);
     const searchQuery = ref('');
-    const statusFilter = ref('Ready');
+    const statusFilter = ref('');
     const computerFilter = ref('');
     
     // 確保jobs.value永遠是陣列
