@@ -17,6 +17,22 @@ type Task struct {
 type Triggers struct {
 	TimeTriggers     *[]TimeTrigger     `xml:"TimeTrigger,omitempty" json:"TimeTriggers,omitempty"`
 	CalendarTriggers *[]CalendarTrigger `xml:"CalendarTrigger,omitempty" json:"CalendarTriggers,omitempty"`
+	WindowsTriggers  *[]WindowsTrigger  `json:"WindowsTriggers,omitempty"`
+}
+
+type WindowsTrigger struct {
+	StartBoundary   string           `json:"StartBoundary"`
+	Repetition      *Repetition      `json:"Repetition,omitempty"`
+	ScheduleByDay   *ScheduleByDay   `json:"ScheduleByDay,omitempty"`
+	ScheduleByWeek  *ScheduleByWeek  `json:"ScheduleByWeek,omitempty"`
+	ScheduleByMonth *ScheduleByMonth `json:"ScheduleByMonth,omitempty"`
+}
+
+type WindowsTriggerRequest struct {
+	ComputerID int64          `json:"computer_id"`
+	TaskName   string         `json:"task_name"`
+	Trigger    WindowsTrigger `json:"trigger"`
+	Index      int            `json:"index,omitempty"`
 }
 
 type RegistrationInfo struct {

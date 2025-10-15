@@ -1,84 +1,93 @@
 param (
-    [Parameter(Mandatory=$true)]
     [string]$TaskName,
-    [Parameter(Mandatory=$true)]
+    [string]$StartBoundary,
+    [string]$RepetitionInterval,
+    [string]$RepetitionDuration,
+    [int]$DaysInterval,
+    [int]$WeeksInterval,
+    [string[]]$DaysOfWeek,
+    [int[]]$DaysOfMonth,
+    [string[]]$Months,
     [string]$UserName,
-    [Parameter(Mandatory=$true)]
     [string]$Password,
-    [Parameter(Mandatory=$true)]
-    [string]$ComputerName,
-    [Parameter(Mandatory=$true)]
-    [string]$TriggerType,
-    [Parameter(Mandatory=$true)]
-    [string]$TriggerTime
+    [string]$ComputerName
 )
 
-[Console]::OutputEncoding = [Text.Encoding]::UTF8
+Write-Output $DaysOfWeek[0]
+    
 
-try {
-    $securePassword = ConvertTo-SecureString $Password -AsPlainText -Force
-    $credential = New-Object System.Management.Automation.PSCredential ($UserName, $securePassword)
+# # 創建安全密碼
+# $securePassword = ConvertTo-SecureString $Password -AsPlainText -Force
+# $credential = New-Object System.Management.Automation.PSCredential ($UserName, $securePassword)
 
-    $result = Invoke-Command -ComputerName $ComputerName -Credential $credential -ScriptBlock {
-        param($taskName, $triggerType, $triggerTime)
+# # 定義返回結果
+# $resultObj = @{ Success = $false; Message = ""; Error = "" }
 
-        try {
-            $triggerTypeParts = $triggerType -split ' '
-            $baseTriggerType = $triggerTypeParts[0]
+# # 嘗試遠程連線
+# try {
+#     $session = New-PSSession -ComputerName $ComputerName -Credential $credential -ErrorAction Stop
+    
+#     # 在遠程機器上執行命令
+#     $result = Invoke-Command -Session $session -ScriptBlock {
+#         param($taskName, $startBoundary, $repetitionInterval, $repetitionDuration, $daysInterval, $weeksInterval, $daysOfWeek, $daysOfMonth, $months)
+        
+#         # 定義返回結果
+#         $resultObj = @{ Success = $false; Message = ""; Error = "" }
+        
+#         # 嘗試獲取任務
+#         try {
+#             $task = Get-ScheduledTask -TaskName $taskName -ErrorAction Stop
+#             $existingTriggers = $task.Triggers
+            
+#             # 解析開始時間
+#             $startTime = [DateTime]::Parse($startBoundary)
+#             $timeOnly = $startTime.ToString("HH:mm")
 
-            # 處理時間格式
-            $timeParts = $triggerTime -split ':'
-            $hour = $timeParts[0].PadLeft(2, '0')
-            $minute = $timeParts[1].PadLeft(2, '0')
-            $timeOnly = "$hour`:$minute"
+#             # 創建新觸發器
+#             $newTrigger = $null
+            
+#             # 根據參數創建適當類型的觸發器
+#             if ($daysInterval -gt 0) {
+#                 # 每日觸發器
+#                 $newTrigger = New-ScheduledTaskTrigger -Daily -DaysInterval $daysInterval -At $timeOnly
+#             } elseif ($weeksInterval -gt 0) {
+#                 # 每週觸發器
+#                 $newTrigger = New-ScheduledTaskTrigger -Weekly -WeeksInterval $weeksInterval -At $timeOnly
+#             } else {
+#                 # 一次性觸發器
+#                 $newTrigger = New-ScheduledTaskTrigger -Once -At $startTime
+#             }
+            
+#             if ($existingTriggers.Count -eq 0) {
+#                 $updatedTriggers = @($newTrigger)
+#             } else {
+#                 $updatedTriggers = $existingTriggers + $newTrigger
+#             }
+            
+#             # 更新任務
+#             Set-ScheduledTask -TaskName $taskName -Trigger $updatedTriggers -ErrorAction Stop
+            
+#             $resultObj.Success = $true
+#             $resultObj.Message = "Trigger added successfully"
+#         } catch {
+#             $resultObj.Success = $false
+#             $resultObj.Error = $_.Exception.Message
+#         }
+        
+#         return $resultObj
+#     } -ArgumentList $TaskName, $StartBoundary, $RepetitionInterval, $RepetitionDuration, $DaysInterval, $WeeksInterval, $DaysOfWeek, $DaysOfMonth, $Months
+    
+#     # 關閉遠程會話
+#     Remove-PSSession $session
+    
+#     $resultObj = $result
+# } catch {
+#     $resultObj.Success = $false
+#     $resultObj.Error = $_.Exception.Message
+# }
 
-            # 預設 null
-            $newTrigger = $null
+# # 輸出結果
+# $resultObj | ConvertTo-Json -Depth 5
 
-            switch ($baseTriggerType) {
-                "Daily" {
-                    $newTrigger = New-ScheduledTaskTrigger -Daily -At $timeOnly
-                }
-                "Weekly" {
-                    $daysOfWeek = @()
-                    for ($i = 1; $i -lt $triggerTypeParts.Length; $i += 2) {
-                        if ($triggerTypeParts[$i] -eq "-DaysOfWeek" -and ($i + 1) -lt $triggerTypeParts.Length) {
-                            $daysOfWeek = $triggerTypeParts[$i + 1] -split ','
-                        }
-                    }
-                    $newTrigger = New-ScheduledTaskTrigger -Weekly -DaysOfWeek $daysOfWeek -At $timeOnly
-                }
-                "Monthly" {
-                    throw "Monthly trigger is not supported by PowerShell cmdlets"
-                }
-                default {
-                    throw "Unsupported trigger type: $baseTriggerType"
-                }
-            }
-
-            $task = Get-ScheduledTask -TaskName $taskName -ErrorAction Stop
-            $triggers = $task.Triggers + $newTrigger
-
-            Set-ScheduledTask -TaskName $taskName -Trigger $triggers -ErrorAction Stop
-
-            return @{
-                Success = $true
-                Message = "Trigger added successfully"
-            }
-        } catch {
-            return @{
-                Success = $false
-                Error = $_.Exception.Message
-            }
-        }
-    } -ArgumentList $TaskName, $TriggerType, $TriggerTime
-
-    $result | ConvertTo-Json -Depth 5
-    if ($result.Success -eq $false) { exit 1 } else { exit 0 }
-} catch {
-    @{
-        Success = $false
-        Error = $_.Exception.Message
-    } | ConvertTo-Json -Depth 5
-    exit 1
-}
+# # 設置退出代碼
+# if ($resultObj.Success -eq $false) { exit 1 } else { exit 0 }

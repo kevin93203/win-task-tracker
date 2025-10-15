@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os/exec"
 	"strings"
+	"strconv"
 
 	"github.com/kevin93203/win-task-tracker/models"
 )
@@ -32,169 +33,6 @@ type ActionRequest struct {
 type GenericResponse struct {
 	Success bool   `json:"success"`
 	Message string `json:"message,omitempty"`
-}
-
-// AddTriggerHandler adds a new trigger to a task
-func AddTriggerHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-	var req TriggerRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "Invalid request payload", http.StatusBadRequest)
-		return
-	}
-	db := models.GetDB()
-	// Get user ID from context (set by auth middleware)
-	userID := r.Context().Value("user_id").(int64)
-
-	host, err := getTaskCredentials(db, userID, req.ComputerID)
-	if err != nil {
-		http.Error(w, fmt.Sprintf("Failed to get remote host info: %v", err), http.StatusInternalServerError)
-		return
-	}
-
-	// Convert Cron expression to PowerShell trigger params
-	var triggerTypeAdd, triggerTimeAdd string
-	partsAdd := strings.Fields(req.CronExpression)
-	if len(partsAdd) != 5 {
-		http.Error(w, "Invalid cron expression format", http.StatusBadRequest)
-		return
-	}
-
-	minute := partsAdd[0]
-	hour := partsAdd[1]
-	dayOfMonth := partsAdd[2]
-	month := partsAdd[3]
-	dayOfWeek := partsAdd[4]
-
-	// 時間格式為 HH:MM (24小時制，確保兩位數)
-	// 填充前導零以確保格式正確
-	hourFormatted := fmt.Sprintf("%02s", hour)
-	minuteFormatted := fmt.Sprintf("%02s", minute)
-	triggerTimeAdd = fmt.Sprintf("%s:%s", hourFormatted, minuteFormatted)
-
-	// 根據 cron 表達式轉換為 SCHTASKS 支持的格式
-	switch {
-	case dayOfMonth == "*" && month == "*" && dayOfWeek == "*":
-		triggerTypeAdd = "Daily"
-	case dayOfMonth == "*" && month == "*" && dayOfWeek != "*":
-		triggerTypeAdd = "Weekly"
-		// Map dayOfWeek number/string to day name
-		days := map[string]string{
-			"0": "SUN", "1": "MON", "2": "TUE", "3": "WED",
-			"4": "THU", "5": "FRI", "6": "SAT",
-			"7": "SUN",
-		}
-		triggerTypeAdd += fmt.Sprintf(" -DaysOfWeek %s", days[dayOfWeek])
-	case dayOfMonth != "*" && month == "*" && dayOfWeek == "*":
-		triggerTypeAdd = fmt.Sprintf("Monthly -DaysOfMonth %s", dayOfMonth)
-	case dayOfMonth != "*" && month != "*" && dayOfWeek == "*":
-		triggerTypeAdd = fmt.Sprintf("Monthly -DaysOfMonth %s -MonthsOfYear %s", dayOfMonth, month)
-	default:
-		http.Error(w, "Unsupported cron pattern for trigger conversion", http.StatusBadRequest)
-		return
-	}
-
-	// 使用 PowerShell 腳本
-	cmd := exec.Command("powershell", "-File", "./scripts/addTriggers.ps1",
-		"-TaskName", req.TaskName,
-		"-TriggerType", triggerTypeAdd,
-		"-TriggerTime", triggerTimeAdd,
-		"-UserName", host.UserName,
-		"-Password", host.Password,
-		"-ComputerName", host.ComputerName,
-	)
-
-	// Execute the command
-	output, err := cmd.CombinedOutput()
-	var resp GenericResponse
-	if err != nil {
-		resp = GenericResponse{Success: false, Message: fmt.Sprintf("Error: %v, Output: %s", err, string(output))}
-	} else {
-		success, message := parsePowerShellOutput(output, "Trigger added successfully")
-		resp = GenericResponse{Success: success, Message: message}
-	}
-	sendAPIResponse(w, resp.Success, resp)
-}
-
-// UpdateTriggerHandler updates an existing trigger
-func UpdateTriggerHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPatch {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-	var req TriggerRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "Invalid request payload", http.StatusBadRequest)
-		return
-	}
-	db := models.GetDB()
-	userID := r.Context().Value("user_id").(int64)
-	host, err := getTaskCredentials(db, userID, req.ComputerID)
-	if err != nil {
-		http.Error(w, fmt.Sprintf("Failed to get remote host info: %v", err), http.StatusInternalServerError)
-		return
-	}
-	// Convert Cron expression to PowerShell trigger params
-	var triggerType, triggerTime string
-	parts := strings.Fields(req.CronExpression)
-	if len(parts) != 5 {
-		http.Error(w, "Invalid cron expression format", http.StatusBadRequest)
-		return
-	}
-
-	minute := parts[0]
-	hour := parts[1]
-	dayOfMonth := parts[2]
-	month := parts[3]
-	dayOfWeek := parts[4]
-
-	// 時間格式為 HH:MM (24小時制，確保兩位數)
-	// 填充前導零以確保格式正確
-	hourFormatted := fmt.Sprintf("%02s", hour)
-	minuteFormatted := fmt.Sprintf("%02s", minute)
-	triggerTime = fmt.Sprintf("%s:%s", hourFormatted, minuteFormatted)
-
-	switch {
-	case dayOfMonth == "*" && month == "*" && dayOfWeek == "*":
-		triggerType = "Daily"
-	case dayOfMonth == "*" && month == "*" && dayOfWeek != "*":
-		triggerType = "Weekly"
-		days := map[string]string{
-			"0": "Sunday", "1": "Monday", "2": "Tuesday", "3": "Wednesday",
-			"4": "Thursday", "5": "Friday", "6": "Saturday",
-			"7": "Sunday",
-		}
-		triggerType += fmt.Sprintf(" -DaysOfWeek %s", days[dayOfWeek])
-	case dayOfMonth != "*" && month == "*" && dayOfWeek == "*":
-		triggerType = fmt.Sprintf("Monthly -DaysOfMonth %s", dayOfMonth)
-	case dayOfMonth != "*" && month != "*" && dayOfWeek == "*":
-		triggerType = fmt.Sprintf("Monthly -MonthsOfYear %s -DaysOfMonth %s", month, dayOfMonth)
-	default:
-		http.Error(w, "Unsupported cron pattern for trigger conversion", http.StatusBadRequest)
-		return
-	}
-
-	cmd := exec.Command("powershell", "-File", "./scripts/changeTriggers.ps1",
-		"-TaskName", req.TaskName,
-		"-TriggerType", triggerType,
-		"-TriggerTime", triggerTime,
-		"-Index", fmt.Sprintf("%d", req.Index),
-		"-UserName", host.UserName,
-		"-Password", host.Password,
-		"-ComputerName", host.ComputerName,
-	)
-	output, err := cmd.CombinedOutput()
-	var resp GenericResponse
-	if err != nil {
-		resp = GenericResponse{Success: false, Message: fmt.Sprintf("Error: %v, Output: %s", err, string(output))}
-	} else {
-		success, message := parsePowerShellOutput(output, "Trigger updated successfully")
-		resp = GenericResponse{Success: success, Message: message}
-	}
-	sendAPIResponse(w, resp.Success, resp)
 }
 
 // DeleteTriggerHandler deletes a trigger from a task
@@ -344,5 +182,287 @@ func DeleteActionHandler(w http.ResponseWriter, r *http.Request) {
 		success, message := parsePowerShellOutput(output, "Action deleted successfully")
 		resp = GenericResponse{Success: success, Message: message}
 	}
+	sendAPIResponse(w, resp.Success, resp)
+}
+
+// AddTriggerHandler adds a new trigger to a task
+func AddTriggerHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var req WindowsTriggerRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request payload", http.StatusBadRequest)
+		return
+	}
+
+	db := models.GetDB()
+	userID := r.Context().Value("user_id").(int64)
+	host, err := getTaskCredentials(db, userID, req.ComputerID)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Failed to get remote host info: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	// Prepare parameters for PowerShell script
+	var args []string
+	args = append(args, "-File", "./scripts/addTriggers.ps1")
+	args = append(args, "-TaskName", req.TaskName)
+	args = append(args, "-UserName", host.UserName)
+	args = append(args, "-Password", host.Password)
+	args = append(args, "-ComputerName", host.ComputerName)
+	args = append(args, "-StartBoundary", req.Trigger.StartBoundary)
+
+	if req.Trigger.Repetition != nil {
+		args = append(args, "-RepetitionInterval", req.Trigger.Repetition.Interval)
+		if req.Trigger.Repetition.Duration != "" {
+			args = append(args, "-RepetitionDuration", req.Trigger.Repetition.Duration)
+		}
+	}
+
+	if req.Trigger.ScheduleByDay != nil {
+		args = append(args, "-DaysInterval", fmt.Sprintf("%d", req.Trigger.ScheduleByDay.DaysInterval))
+	} else if req.Trigger.ScheduleByWeek != nil {
+		args = append(args, "-WeeksInterval", fmt.Sprintf("%d", req.Trigger.ScheduleByWeek.WeeksInterval))
+
+		// Convert DaysOfWeek struct to array of strings
+		daysOfWeek := []string{}
+		if req.Trigger.ScheduleByWeek.DaysOfWeek.Sunday {
+			daysOfWeek = append(daysOfWeek, "Sunday")
+		}
+		if req.Trigger.ScheduleByWeek.DaysOfWeek.Monday {
+			daysOfWeek = append(daysOfWeek, "Monday")
+		}
+		if req.Trigger.ScheduleByWeek.DaysOfWeek.Tuesday {
+			daysOfWeek = append(daysOfWeek, "Tuesday")
+		}
+		if req.Trigger.ScheduleByWeek.DaysOfWeek.Wednesday {
+			daysOfWeek = append(daysOfWeek, "Wednesday")
+		}
+		if req.Trigger.ScheduleByWeek.DaysOfWeek.Thursday {
+			daysOfWeek = append(daysOfWeek, "Thursday")
+		}
+		if req.Trigger.ScheduleByWeek.DaysOfWeek.Friday {
+			daysOfWeek = append(daysOfWeek, "Friday")
+		}
+		if req.Trigger.ScheduleByWeek.DaysOfWeek.Saturday {
+			daysOfWeek = append(daysOfWeek, "Saturday")
+		}
+
+		if len(daysOfWeek) > 0 {
+			joined := "'" + strings.Join(daysOfWeek, "','") + "'"
+			args = append(args, "-DaysOfWeek", fmt.Sprintf("@(%s)", joined))
+		}
+	} else if req.Trigger.ScheduleByMonth != nil {
+		// Convert DaysOfMonth to array of days
+		if len(req.Trigger.ScheduleByMonth.DaysOfMonth.Days) > 0 {
+			days := make([]string, len(req.Trigger.ScheduleByMonth.DaysOfMonth.Days))
+			for i, d := range req.Trigger.ScheduleByMonth.DaysOfMonth.Days {
+				days[i] = strconv.Itoa(d)
+			}
+			args = append(args, "-DaysOfMonth", fmt.Sprintf("@(%s)", strings.Join(days, ",")))
+		}
+
+		// Convert Months struct to array of strings
+		months := []string{}
+		if req.Trigger.ScheduleByMonth.Months.January {
+			months = append(months, "January")
+		}
+		if req.Trigger.ScheduleByMonth.Months.February {
+			months = append(months, "February")
+		}
+		if req.Trigger.ScheduleByMonth.Months.March {
+			months = append(months, "March")
+		}
+		if req.Trigger.ScheduleByMonth.Months.April {
+			months = append(months, "April")
+		}
+		if req.Trigger.ScheduleByMonth.Months.May {
+			months = append(months, "May")
+		}
+		if req.Trigger.ScheduleByMonth.Months.June {
+			months = append(months, "June")
+		}
+		if req.Trigger.ScheduleByMonth.Months.July {
+			months = append(months, "July")
+		}
+		if req.Trigger.ScheduleByMonth.Months.August {
+			months = append(months, "August")
+		}
+		if req.Trigger.ScheduleByMonth.Months.September {
+			months = append(months, "September")
+		}
+		if req.Trigger.ScheduleByMonth.Months.October {
+			months = append(months, "October")
+		}
+		if req.Trigger.ScheduleByMonth.Months.November {
+			months = append(months, "November")
+		}
+		if req.Trigger.ScheduleByMonth.Months.December {
+			months = append(months, "December")
+		}
+
+		for _, month := range months {
+			args = append(args, "-Months", month)
+		}
+	}
+
+	// Use PowerShell script
+	cmd := exec.Command("powershell", args...)
+	fmt.Println(cmd.String())
+
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		resp := GenericResponse{Success: false, Message: fmt.Sprintf("Error: %v, Output: %s", err, string(output))}
+		sendAPIResponse(w, resp.Success, resp)
+		return
+	}
+
+	success, message := parsePowerShellOutput(output, "Trigger added successfully")
+	resp := GenericResponse{Success: success, Message: message}
+	sendAPIResponse(w, resp.Success, resp)
+}
+
+// UpdateTriggerHandler updates a Windows Task Scheduler trigger in a task
+func UpdateTriggerHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPatch {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var req WindowsTriggerRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request payload", http.StatusBadRequest)
+		return
+	}
+
+	db := models.GetDB()
+	userID := r.Context().Value("user_id").(int64)
+	host, err := getTaskCredentials(db, userID, req.ComputerID)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Failed to get remote host info: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	// Prepare parameters for PowerShell script
+	var args []string
+	args = append(args, "-File", "./scripts/changeTriggers.ps1")
+	args = append(args, "-TaskName", req.TaskName)
+	args = append(args, "-Index", fmt.Sprintf("%d", req.Index))
+	args = append(args, "-UserName", host.UserName)
+	args = append(args, "-Password", host.Password)
+	args = append(args, "-ComputerName", host.ComputerName)
+	args = append(args, "-StartBoundary", req.Trigger.StartBoundary)
+
+	if req.Trigger.Repetition != nil {
+		args = append(args, "-RepetitionInterval", req.Trigger.Repetition.Interval)
+		if req.Trigger.Repetition.Duration != "" {
+			args = append(args, "-RepetitionDuration", req.Trigger.Repetition.Duration)
+		}
+	}
+
+	if req.Trigger.ScheduleByDay != nil {
+		args = append(args, "-DaysInterval", fmt.Sprintf("%d", req.Trigger.ScheduleByDay.DaysInterval))
+	} else if req.Trigger.ScheduleByWeek != nil {
+		args = append(args, "-WeeksInterval", fmt.Sprintf("%d", req.Trigger.ScheduleByWeek.WeeksInterval))
+
+		// Convert DaysOfWeek struct to array of strings
+		daysOfWeek := []string{}
+		if req.Trigger.ScheduleByWeek.DaysOfWeek.Sunday {
+			daysOfWeek = append(daysOfWeek, "Sunday")
+		}
+		if req.Trigger.ScheduleByWeek.DaysOfWeek.Monday {
+			daysOfWeek = append(daysOfWeek, "Monday")
+		}
+		if req.Trigger.ScheduleByWeek.DaysOfWeek.Tuesday {
+			daysOfWeek = append(daysOfWeek, "Tuesday")
+		}
+		if req.Trigger.ScheduleByWeek.DaysOfWeek.Wednesday {
+			daysOfWeek = append(daysOfWeek, "Wednesday")
+		}
+		if req.Trigger.ScheduleByWeek.DaysOfWeek.Thursday {
+			daysOfWeek = append(daysOfWeek, "Thursday")
+		}
+		if req.Trigger.ScheduleByWeek.DaysOfWeek.Friday {
+			daysOfWeek = append(daysOfWeek, "Friday")
+		}
+		if req.Trigger.ScheduleByWeek.DaysOfWeek.Saturday {
+			daysOfWeek = append(daysOfWeek, "Saturday")
+		}
+
+		if len(daysOfWeek) > 0 {
+			joined := "'" + strings.Join(daysOfWeek, "','") + "'"
+			args = append(args, "-DaysOfWeek", fmt.Sprintf("@(%s)", joined))
+		}
+	} else if req.Trigger.ScheduleByMonth != nil {
+		// Convert DaysOfMonth to array of days
+		if len(req.Trigger.ScheduleByMonth.DaysOfMonth.Days) > 0 {
+			days := make([]string, len(req.Trigger.ScheduleByMonth.DaysOfMonth.Days))
+			for i, d := range req.Trigger.ScheduleByMonth.DaysOfMonth.Days {
+				days[i] = strconv.Itoa(d)
+			}
+			args = append(args, "-DaysOfMonth", fmt.Sprintf("@(%s)", strings.Join(days, ",")))
+		}
+
+		// Convert Months struct to array of strings
+		months := []string{}
+		if req.Trigger.ScheduleByMonth.Months.January {
+			months = append(months, "January")
+		}
+		if req.Trigger.ScheduleByMonth.Months.February {
+			months = append(months, "February")
+		}
+		if req.Trigger.ScheduleByMonth.Months.March {
+			months = append(months, "March")
+		}
+		if req.Trigger.ScheduleByMonth.Months.April {
+			months = append(months, "April")
+		}
+		if req.Trigger.ScheduleByMonth.Months.May {
+			months = append(months, "May")
+		}
+		if req.Trigger.ScheduleByMonth.Months.June {
+			months = append(months, "June")
+		}
+		if req.Trigger.ScheduleByMonth.Months.July {
+			months = append(months, "July")
+		}
+		if req.Trigger.ScheduleByMonth.Months.August {
+			months = append(months, "August")
+		}
+		if req.Trigger.ScheduleByMonth.Months.September {
+			months = append(months, "September")
+		}
+		if req.Trigger.ScheduleByMonth.Months.October {
+			months = append(months, "October")
+		}
+		if req.Trigger.ScheduleByMonth.Months.November {
+			months = append(months, "November")
+		}
+		if req.Trigger.ScheduleByMonth.Months.December {
+			months = append(months, "December")
+		}
+
+		for _, month := range months {
+			args = append(args, "-Months", month)
+		}
+	}
+
+	fmt.Println(args)
+	// Use PowerShell script
+	cmd := exec.Command("powershell", args...)
+	fmt.Println(cmd.String())
+
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		resp := GenericResponse{Success: false, Message: fmt.Sprintf("Error: %v, Output: %s", err, string(output))}
+		sendAPIResponse(w, resp.Success, resp)
+		return
+	}
+
+	success, message := parsePowerShellOutput(output, "Trigger updated successfully")
+	resp := GenericResponse{Success: success, Message: message}
 	sendAPIResponse(w, resp.Success, resp)
 }
