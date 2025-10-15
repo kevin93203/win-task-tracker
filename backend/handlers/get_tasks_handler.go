@@ -6,8 +6,8 @@ import (
 	"net/http"
 	"sync"
 
-	"github.com/kevin93203/win-task-tracker/auth"
-	"github.com/kevin93203/win-task-tracker/models"
+	"win-task-tracker/backend/auth"
+	"win-task-tracker/backend/models"
 )
 
 // GetTasksHandler 處理獲取所有排程任務的請求

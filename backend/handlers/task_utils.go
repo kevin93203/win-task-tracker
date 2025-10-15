@@ -9,7 +9,7 @@ import (
 	"os/exec"
 	"sync"
 
-	"github.com/kevin93203/win-task-tracker/models"
+	"win-task-tracker/backend/models"
 )
 
 // executeCommand 執行 PowerShell 命令並解析 XML 結果

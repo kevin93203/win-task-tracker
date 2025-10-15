@@ -2,14 +2,22 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"net/http"
+	"win-task-tracker/backend/handlers"
+	"win-task-tracker/backend/middleware"
+	"win-task-tracker/backend/models"
 
-	"github.com/kevin93203/win-task-tracker/handlers"
-	"github.com/kevin93203/win-task-tracker/middleware"
-	"github.com/kevin93203/win-task-tracker/models"
+	"github.com/joho/godotenv"
 )
 
 func main() {
+	// Load .env file
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatal("Error loading .env file")
+	}
+
 	// Initialize all model tables
 	if err := models.InitDB(); err != nil {
 		fmt.Printf("Failed to initialize model tables: %v\n", err)

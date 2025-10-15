@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/kevin93203/win-task-tracker/auth"
+	"win-task-tracker/backend/auth"
 )
 
 type LoginRequest struct {

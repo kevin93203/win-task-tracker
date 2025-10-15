@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/kevin93203/win-task-tracker/models"
+	"win-task-tracker/backend/models"
 )
 
 type RemoteComputerHandler struct {

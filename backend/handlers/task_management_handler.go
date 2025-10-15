@@ -8,7 +8,7 @@ import (
 	"strings"
 	"strconv"
 
-	"github.com/kevin93203/win-task-tracker/models"
+	"win-task-tracker/backend/models"
 )
 
 // TriggerRequest represents the payload for trigger operations

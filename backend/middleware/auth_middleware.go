@@ -5,7 +5,7 @@ import (
 	"net/http"
 
 	"github.com/golang-jwt/jwt/v4"
-	"github.com/kevin93203/win-task-tracker/auth"
+	"win-task-tracker/backend/auth"
 )
 
 var jwtSecret = []byte("your-secret-key") // Should match the secret in auth package

@@ -2,13 +2,28 @@ package middleware
 
 import (
 	"net/http"
+	"os"
+	"strings"
 )
 
 func CorsMiddleware(next http.HandlerFunc) http.HandlerFunc {
+	allowedOriginsStr := os.Getenv("ALLOWED_ORIGINS")
+	var allowedOrigins []string
+	if allowedOriginsStr != "" {
+		allowedOrigins = strings.Split(allowedOriginsStr, ",")
+	}
+
 	return func(w http.ResponseWriter, r *http.Request) {
-		// 檢查請求來源
 		origin := r.Header.Get("Origin")
-		if origin == "http://localhost:5173" {
+		isAllowed := false
+		for _, allowed := range allowedOrigins {
+			if origin == allowed {
+				isAllowed = true
+				break
+			}
+		}
+
+		if isAllowed {
 			w.Header().Set("Access-Control-Allow-Origin", origin)
 		}
 

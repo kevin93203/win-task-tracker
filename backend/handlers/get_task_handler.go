@@ -9,8 +9,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/kevin93203/win-task-tracker/auth"
-	"github.com/kevin93203/win-task-tracker/models"
+	"win-task-tracker/backend/auth"
+	"win-task-tracker/backend/models"
 )
 
 // GetTaskHandler 處理獲取單個排程任務的請求
