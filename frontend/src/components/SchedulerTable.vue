@@ -212,7 +212,9 @@ export default {
     const filteredJobs = computed(() => {
       return ensureJobsArray.value.filter(job => {
         const matchesSearch = searchQuery.value === '' ||
-          job.RegistrationInfo.URI.toLowerCase().includes(searchQuery.value.toLowerCase());
+          job.RegistrationInfo.URI.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
+          job.RegistrationInfo.Description?.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
+          job.Actions.Execs.some(action => action.Command.toLowerCase().includes(searchQuery.value.toLowerCase()));
         
         const matchesStatus = statusFilter.value === '' ||
           job.ExtraInfo.State === statusFilter.value;
