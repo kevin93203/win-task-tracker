@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"win-task-tracker/backend/handlers"
 	"win-task-tracker/backend/middleware"
 	"win-task-tracker/backend/models"
@@ -26,6 +27,11 @@ func main() {
 
 	// Create handlers
 	remoteComputerHandler := handlers.NewRemoteComputerHandler(models.GetDB())
+
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080" // Default port if not specified
+	}
 
 	// Authentication endpoints
 	http.HandleFunc("/api/register", middleware.CorsMiddleware(handlers.RegisterHandler))
@@ -89,8 +95,8 @@ func main() {
 	http.HandleFunc("/api/computers/delete", middleware.CorsMiddleware(middleware.AuthMiddleware(remoteComputerHandler.HandleDeleteComputer)))
 	http.HandleFunc("/api/credentials/delete", middleware.CorsMiddleware(middleware.AuthMiddleware(remoteComputerHandler.HandleDeleteCredential)))
 
-	fmt.Println("Server is running on :8080")
-	if err := http.ListenAndServe(":8080", nil); err != nil {
+	fmt.Printf("Server is running on :%s\n", port)
+	if err := http.ListenAndServe(":"+port, nil); err != nil {
 		fmt.Printf("Server failed to start: %v\n", err)
 	}
 }
