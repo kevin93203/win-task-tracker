@@ -392,6 +392,8 @@ function getStatusChinese(status) {
       return '執行中';
     case 'Disabled':
       return '已停用';
+    case 'ReadyAndRunning':
+      return '就緒+執行中';
     default:
       return status;
   }
@@ -405,6 +407,8 @@ function getStatusClass(status) {
       return 'bg-yellow-50 text-yellow-700';
     case 'Disabled':
       return 'bg-red-50 text-red-700';
+    case 'ReadyAndRunning':
+      return 'bg-blue-50 text-blue-700';
     default:
       return 'bg-gray-50 text-gray-700';
   }

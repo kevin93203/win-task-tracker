@@ -22,6 +22,7 @@
         <option value="">全部狀態</option>
         <option value="Ready">就緒</option>
         <option value="Running">執行中</option>
+        <option value="ReadyAndRunning">就緒+執行中</option>
         <option value="Disabled">已停用</option>
       </select>
 
@@ -69,4 +70,4 @@ export default {
   },
   emits: ['update:searchQuery', 'update:statusFilter', 'update:computerFilter', 'refresh']
 }
-</script> 
+</script>

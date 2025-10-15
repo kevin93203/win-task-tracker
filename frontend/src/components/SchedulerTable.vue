@@ -68,7 +68,7 @@ export default {
     const loading = ref(true);
     const error = ref(null);
     const searchQuery = ref('');
-    const statusFilter = ref('');
+    const statusFilter = ref('ReadyAndRunning'); // Set default to 'ReadyAndRunning'
     const computerFilter = ref('');
     
     // 確保jobs.value永遠是陣列
@@ -217,7 +217,8 @@ export default {
           job.Actions.Execs.some(action => action.Command.toLowerCase().includes(searchQuery.value.toLowerCase()));
         
         const matchesStatus = statusFilter.value === '' ||
-          job.ExtraInfo.State === statusFilter.value;
+          job.ExtraInfo.State === statusFilter.value ||
+          (statusFilter.value === 'ReadyAndRunning' && (job.ExtraInfo.State === 'Ready' || job.ExtraInfo.State === 'Running'));
 
         const matchesComputer = computerFilter.value === '' ||
           job.ExtraInfo.ComputerName === computerFilter.value;
