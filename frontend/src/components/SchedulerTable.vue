@@ -145,7 +145,7 @@ export default {
         const jwtCookie = cookies.find(cookie => cookie.trim().startsWith('jwt='));
         const jwt = jwtCookie ? jwtCookie.split('=')[1].trim() : null;
 
-        const response = await axios.get(`http://localhost:8080/api/tasks/${computerID}/${encodeURIComponent(taskName)}`, {
+        const response = await axios.get(`${import.meta.env.VITE_API_URL}/tasks/${computerID}/${encodeURIComponent(taskName)}`, {
           withCredentials: true,
           headers: {
             'Authorization': `Bearer ${jwt}`
@@ -175,7 +175,7 @@ export default {
         const jwtCookie = cookies.find(cookie => cookie.trim().startsWith('jwt='));
         const jwt = jwtCookie ? jwtCookie.split('=')[1].trim() : null;
 
-        const response = await axios.get('http://localhost:8080/api/tasks', {
+        const response = await axios.get(`${import.meta.env.VITE_API_URL}/tasks`, {
           withCredentials: true,
           headers: {
             'Authorization': `Bearer ${jwt}`

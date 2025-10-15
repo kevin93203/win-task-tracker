@@ -164,7 +164,7 @@ async function enableTask() {
     const jwt = jwtCookie ? jwtCookie.split('=')[1].trim() : null;
 
     const response = await axios.post(
-      'http://localhost:8080/api/tasks/enable',
+      `${import.meta.env.VITE_API_URL}/tasks/enable`,
       {
         computer_id: props.job.ExtraInfo.ComputerID,
         task_name: props.job.ExtraInfo.TaskName
@@ -218,7 +218,7 @@ async function startTask() {
     const jwt = jwtCookie ? jwtCookie.split('=')[1].trim() : null;
 
     const response = await axios.post(
-      'http://localhost:8080/api/tasks/start',
+      `${import.meta.env.VITE_API_URL}/tasks/start`,
       {
         computer_id: props.job.ExtraInfo.ComputerID,
         task_name: props.job.ExtraInfo.TaskName
@@ -272,7 +272,7 @@ async function stopTask() {
     const jwt = jwtCookie ? jwtCookie.split('=')[1].trim() : null;
 
     const response = await axios.post(
-      'http://localhost:8080/api/tasks/stop',
+      `${import.meta.env.VITE_API_URL}/tasks/stop`,
       {
         computer_id: props.job.ExtraInfo.ComputerID,
         task_name: props.job.ExtraInfo.TaskName
@@ -326,7 +326,7 @@ async function disableTask() {
     const jwt = jwtCookie ? jwtCookie.split('=')[1].trim() : null;
 
     const response = await axios.post(
-      'http://localhost:8080/api/tasks/disable',
+      `${import.meta.env.VITE_API_URL}/tasks/disable`,
       {
         computer_id: props.job.ExtraInfo.ComputerID,
         task_name: props.job.ExtraInfo.TaskName

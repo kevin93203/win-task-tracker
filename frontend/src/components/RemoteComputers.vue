@@ -405,7 +405,7 @@ export default {
     
     async fetchAllComputerMappings() {
       try {
-        const response = await fetch('http://localhost:8080/api/computers/credential-mappings', {
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/computers/credential-mappings`, {
           method: 'GET',
           credentials: 'include'
         });
@@ -448,7 +448,7 @@ export default {
     // Keep fetchCredentials as we still need the full list for the dropdown
     async fetchCredentials() {
       try {
-        const response = await fetch('http://localhost:8080/api/credentials/list', {
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/credentials/list`, {
           method: 'GET',
           credentials: 'include'
         });
@@ -478,7 +478,7 @@ export default {
           payload.credential_id = parseInt(this.newComputer.credential_id);
         }
         
-        const response = await fetch('http://localhost:8080/api/computers', {
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/computers`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
@@ -508,7 +508,7 @@ export default {
     async addCredential() {
       this.loading = true;
       try {
-        const response = await fetch('http://localhost:8080/api/credentials', {
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/credentials`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
@@ -540,7 +540,7 @@ export default {
       
       this.loading = true;
       try {
-        const response = await fetch('http://localhost:8080/api/computers/delete', {
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/computers/delete`, {
           method: 'DELETE',
           headers: {
             'Content-Type': 'application/json'
@@ -569,7 +569,7 @@ export default {
       
       this.loading = true;
       try {
-        const response = await fetch('http://localhost:8080/api/credentials/delete', {
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/credentials/delete`, {
           method: 'DELETE',
           headers: {
             'Content-Type': 'application/json'
@@ -609,7 +609,7 @@ export default {
         // Check if we have an existing mapping by looking at the mappingId property
         if (computer.mappingId && computer.selectedCredentialId) {
           // Update an existing mapping
-          const response = await fetch('http://localhost:8080/api/computers/map-credential/update', {
+          const response = await fetch(`${import.meta.env.VITE_API_URL}/computers/map-credential/update`, {
             method: 'PATCH',
             headers: {
               'Content-Type': 'application/json'
@@ -626,7 +626,7 @@ export default {
           }
         } else if (computer.selectedCredentialId) {
           // Create a new mapping
-          const response = await fetch('http://localhost:8080/api/computers/map-credential', {
+          const response = await fetch(`${import.meta.env.VITE_API_URL}/computers/map-credential`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json'
@@ -687,7 +687,7 @@ export default {
     async updateCredential() {
       this.loading = true;
       try {
-        const response = await fetch('http://localhost:8080/api/credentials/update', {
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/credentials/update`, {
           method: 'PATCH',
           headers: {
             'Content-Type': 'application/json'
@@ -724,4 +724,4 @@ export default {
     }
   }
 };
-</script> 
+</script>
