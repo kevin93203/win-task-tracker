@@ -63,7 +63,7 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 		HttpOnly: true,
 		Path:     "/",
 		SameSite: http.SameSiteStrictMode,
-		Secure:   true, // Set to true in production with HTTPS
+		Secure:   false, // Set to true in production with HTTPS
 	})
 
 	w.Header().Set("Content-Type", "application/json")

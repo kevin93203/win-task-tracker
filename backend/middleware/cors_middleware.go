@@ -38,6 +38,9 @@ func CorsMiddleware(next http.HandlerFunc) http.HandlerFunc {
 
 		// 處理 OPTIONS 請求
 		if r.Method == http.MethodOptions {
+			if isAllowed {
+				w.Header().Set("Access-Control-Allow-Origin", origin)
+			}
 			w.WriteHeader(http.StatusNoContent)
 			return
 		}
